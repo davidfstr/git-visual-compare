@@ -1,13 +1,14 @@
 """
-gvc — Git Visual Compare
-Entry point: parse arguments, run git diff, render HTML, open a window.
+gvc -- Git Visual Compare
+Entry point: parse arguments, run git diff, hand off to GUI subprocess.
 """
 
 from __future__ import annotations
 
-import os
+import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -26,14 +27,10 @@ def main() -> None:
 
     # Build the git diff command.
     # -M enables rename detection with git's default 50% threshold.
-    # User arguments are passed through verbatim.
     cmd = ["git", "diff", "-M"] + args
 
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-        )
+        result = subprocess.run(cmd, capture_output=True)
     except FileNotFoundError:
         sys.stderr.write("gvc: 'git' not found. Is git installed and in PATH?\n")
         sys.exit(1)
@@ -44,46 +41,24 @@ def main() -> None:
 
     raw = result.stdout
 
-    # ------------------------------------------------------------------
-    # Late imports: keep startup fast for error paths above
-    # ------------------------------------------------------------------
-    import webview  # noqa: PLC0415
+    # Write diff data + metadata to a temp file for the GUI subprocess.
+    with tempfile.NamedTemporaryFile(
+        delete=False, suffix=".gvc", mode="wb"
+    ) as tmp:
+        # Header line: JSON metadata, then a newline, then raw diff bytes
+        meta = json.dumps({"title": _build_title(args)})
+        tmp.write(meta.encode("utf-8"))
+        tmp.write(b"\n")
+        tmp.write(raw)
+        tmp_path = tmp.name
 
-    from gvc.app_api import AppApi
-    from gvc.diff_parser import is_large, large_sentinel, parse
-    from gvc.prefs import Prefs
-    from gvc.renderer import render
-    from gvc.window_manager import create_window, inject_geometry_tracker
-
-    prefs = Prefs.load()
-
-    # Large diff guard
-    large = is_large(raw)
-    if large:
-        file_diffs = large_sentinel(raw)
-        sentinel = file_diffs[0]
-        html_doc = render(
-            [],
-            large=True,
-            raw_size=sentinel.raw_size,
-            raw_lines=sentinel.raw_lines,
-            title=_build_title(args),
-        )
-    else:
-        file_diffs = parse(raw)
-        html_doc = render(file_diffs, title=_build_title(args))
-
-    api = AppApi(prefs)
-    title = _build_title(args)
-
-    window = create_window(html_doc, title, prefs, api)
-
-    def on_loaded() -> None:
-        inject_geometry_tracker(window)
-
-    window.events.loaded += on_loaded
-
-    webview.start(private_mode=False)
+    # Launch the GUI in a detached subprocess and exit immediately.
+    subprocess.Popen(
+        [sys.executable, "-m", "gvc._gui", tmp_path],
+        start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 if __name__ == "__main__":

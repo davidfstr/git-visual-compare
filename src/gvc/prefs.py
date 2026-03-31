@@ -55,9 +55,14 @@ class Prefs:
                 data = json.load(fh)
             # Only keep keys that exist in the dataclass to tolerate schema drift
             known = {f for f in cls.__dataclass_fields__}
-            return cls(**{k: v for k, v in data.items() if k in known})
+            p = cls(**{k: v for k, v in data.items() if k in known})
         except (json.JSONDecodeError, TypeError):
             return cls()
+        # Reset stored geometry if it looks corrupt (e.g. from a bad JS save)
+        if p.window_width < 50 or p.window_height not in range(-1, 100_000):
+            p.window_width = DEFAULT_WIDTH
+            p.window_height = DEFAULT_HEIGHT
+        return p
 
     def save(self) -> None:
         path = self._path()
@@ -86,6 +91,10 @@ class Prefs:
     def record_window_geometry(
         self, x: int, y: int, width: int, height: int
     ) -> None:
+        # Reject implausible values that may come from JS before the window
+        # is fully laid out (e.g. zero dimensions on early resize events).
+        if width < 50 or height < 50:
+            return
         self.window_x = x
         self.window_y = y
         self.window_width = width

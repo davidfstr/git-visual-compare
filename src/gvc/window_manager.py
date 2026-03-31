@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import threading
 from typing import TYPE_CHECKING
 
 import webview
@@ -11,28 +10,55 @@ if TYPE_CHECKING:
     from gvc.app_api import AppApi
     from gvc.prefs import Prefs
 
+# Minimum window dimensions
+_MIN_WIDTH = 100   # ~10 monospace columns at 13px
+_MIN_HEIGHT = 100  # ~5 rows at 20px
+
 # How far each new window is offset from the previous one
 _STACK_X = 30
 _STACK_Y = 30
 
 
-def _get_screen_height() -> int:
-    """Return the main screen height in pixels, with a sensible fallback."""
-    try:
-        screens = webview.screens
-        if screens:
-            return screens[0].height
-    except Exception:
-        pass
-    # Fallback: try PyObjC
+def _get_screen_frame() -> tuple[int, int, int, int]:
+    """
+    Return (x, y, width, height) of the main screen's visible frame
+    (i.e. excluding the macOS menu bar and Dock).
+
+    Uses AppKit directly so this works before webview.start() is called.
+    Falls back to a safe 1440×900 assumption if AppKit is unavailable.
+    """
     try:
         import AppKit  # type: ignore
         screen = AppKit.NSScreen.mainScreen()
         if screen:
-            return int(screen.frame().size.height)
+            # visibleFrame excludes the menu bar and dock
+            vf = screen.visibleFrame()
+            sf = screen.frame()
+            # Cocoa uses bottom-left origin; convert y to top-left for pywebview
+            # pywebview's y=0 is the top of the screen (below the menu bar)
+            screen_h = int(sf.size.height)
+            x = int(vf.origin.x)
+            # Convert from bottom-left Cocoa origin to top-left pywebview origin
+            y = screen_h - int(vf.origin.y) - int(vf.size.height)
+            w = int(vf.size.width)
+            h = int(vf.size.height)
+            return x, y, w, h
     except Exception:
         pass
-    return 900
+    return 0, 0, 1440, 900
+
+
+def _clamp_geometry(
+    x: int, y: int, width: int, height: int,
+    sx: int, sy: int, sw: int, sh: int,
+) -> tuple[int, int, int, int]:
+    """Clamp window geometry to minimum size and keep it fully on-screen."""
+    width = max(_MIN_WIDTH, width)
+    height = max(_MIN_HEIGHT, height)
+    # Clamp position so the window is never placed outside the screen
+    x = max(sx, min(x, sx + sw - width))
+    y = max(sy, min(y, sy + sh - height))
+    return x, y, width, height
 
 
 def create_window(
@@ -42,19 +68,18 @@ def create_window(
     api: "AppApi",
 ) -> webview.Window:
     """Create a new diff window and wire up lifecycle events."""
+    sx, sy, sw, sh = _get_screen_frame()
 
-    # Determine position for this window
+    # Resolve width/height from prefs, replacing sentinel -1 with screen height
+    from gvc.prefs import DEFAULT_WIDTH as _DEFAULT_WIDTH
+    width = prefs.window_width if prefs.window_width > 0 else _DEFAULT_WIDTH
+    height = prefs.window_height if prefs.window_height > 0 else sh
+
+    # Cascade position from last opened window
     x, y = prefs.next_window_position()
 
-    # Resolve height
-    height = prefs.window_height
-    if height == -1:
-        # Defer screen height lookup until after webview is initialised
-        # (screens list may not be available yet); use a sentinel and fix up
-        # in post_start.  For now, use a large value — the OS will constrain it.
-        height = 2000  # will be clamped by the OS to screen height
-
-    width = prefs.window_width
+    # Clamp everything to safe on-screen values
+    x, y, width, height = _clamp_geometry(x, y, width, height, sx, sy, sw, sh)
 
     window = webview.create_window(
         title=title,
@@ -66,18 +91,10 @@ def create_window(
         y=y,
         resizable=True,
         text_select=True,
-        # Disable pywebview's built-in context menu — we don't need it
-        # (not all backends support this flag; ignore errors)
     )
 
     api.register_window(window)
     prefs.record_window_opened(x, y)
-
-    # Wire up resize/move → save geometry
-    def on_resized(width: int, height: int) -> None:
-        # pywebview doesn't give us x/y in this callback, so we can't save
-        # position here.  We rely on JS to call save_window_geometry instead.
-        pass
 
     def on_closed() -> None:
         api.unregister_window(window)
@@ -89,20 +106,26 @@ def create_window(
 
 def inject_geometry_tracker(window: webview.Window) -> None:
     """
-    Inject a small JS snippet that calls pywebview.api.save_window_geometry
-    whenever the window is resized.  Called after the page is loaded.
+    Inject JS that saves window geometry to prefs whenever the window is resized.
+    Called after the page finishes loading.
+
+    Note: window.outerWidth/Height in WKWebView reflects the WebView's own frame,
+    which equals the window's content area.  We save these as a reasonable proxy
+    for window size; position is tracked separately via screenX/Y.
     """
     js = """
 (function() {
-    let _resizeTimer = null;
+    var _t = null;
     window.addEventListener('resize', function() {
-        clearTimeout(_resizeTimer);
-        _resizeTimer = setTimeout(function() {
-            if (window.pywebview && window.pywebview.api) {
-                window.pywebview.api.save_window_geometry(
-                    window.screenX, window.screenY,
-                    window.outerWidth, window.outerHeight
-                );
+        clearTimeout(_t);
+        _t = setTimeout(function() {
+            var w = window.outerWidth  || window.innerWidth;
+            var h = window.outerHeight || window.innerHeight;
+            var sx = window.screenX;
+            var sy = window.screenY;
+            // Only save if we have plausible values
+            if (w > 50 && h > 50 && window.pywebview && window.pywebview.api) {
+                window.pywebview.api.save_window_geometry(sx, sy, w, h);
             }
         }, 300);
     });

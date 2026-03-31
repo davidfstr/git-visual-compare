@@ -96,9 +96,19 @@ def create_window(
     api.register_window(window)
     prefs.record_window_opened(x, y)
 
+    def on_shown() -> None:
+        # Bring the app to the front so the new window isn't hidden behind
+        # other apps (pywebview doesn't do this automatically on macOS).
+        try:
+            import AppKit  # type: ignore
+            AppKit.NSApp.activateIgnoringOtherApps_(True)
+        except Exception:
+            pass
+
     def on_closed() -> None:
         api.unregister_window(window)
 
+    window.events.shown += on_shown
     window.events.closed += on_closed
 
     return window

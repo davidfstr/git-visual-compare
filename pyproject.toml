@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gvc"
+version = "1.0.0"
+description = "Git Visual Compare — a GUI diff viewer driven from the command line"
+requires-python = ">=3.14"
+dependencies = [
+    "pywebview>=5.0",
+    "platformdirs>=4.0",
+]
+
+[project.scripts]
+gvc = "gvc.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gvc"]

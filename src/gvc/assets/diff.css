@@ -1,0 +1,379 @@
+/* =========================================================
+   gvc — Git Visual Compare  |  diff.css
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   CSS custom properties (light mode defaults)
+   --------------------------------------------------------- */
+:root {
+  --bg:                #ffffff;
+  --fg:                #24292e;
+  --border:            #e1e4e8;
+
+  --added-bg:          #e6ffed;
+  --added-border:      #acf2bd;
+  --removed-bg:        #ffeef0;
+  --removed-border:    #fdb8c0;
+  --hunk-bg:           #f1f8ff;
+  --hunk-fg:           #6a737d;
+  --trailing-ws-bg:    #87ceaa;  /* darker green patch on added line */
+
+  --lineno-fg:         #b0b7c0;
+  --lineno-border:     #e1e4e8;
+
+  --outline-bg:        #f6f8fa;
+  --outline-border:    #e1e4e8;
+  --outline-hover:     #e1e4e8;
+
+  --find-bar-bg:       #f6f8fa;
+  --find-bar-border:   #d0d7de;
+  --find-highlight:    #ffdf5d;
+  --find-current:      #ff9900;
+  --find-toggle-active-bg: #0366d6;
+  --find-toggle-active-fg: #ffffff;
+
+  --summary-triangle:  #586069;
+
+  --font-size:         13px;
+  --font-family:       ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:                #0d1117;
+    --fg:                #c9d1d9;
+    --border:            #30363d;
+
+    --added-bg:          #0d2b1e;
+    --added-border:      #1b4332;
+    --removed-bg:        #2b0d12;
+    --removed-border:    #4b1f27;
+    --hunk-bg:           #0d1b2b;
+    --hunk-fg:           #8b949e;
+    --trailing-ws-bg:    #1a4d2e;
+
+    --lineno-fg:         #484f58;
+    --lineno-border:     #21262d;
+
+    --outline-bg:        #161b22;
+    --outline-border:    #30363d;
+    --outline-hover:     #21262d;
+
+    --find-bar-bg:       #161b22;
+    --find-bar-border:   #30363d;
+    --find-highlight:    #5a4000;
+    --find-current:      #8a6000;
+    --find-toggle-active-bg: #1f6feb;
+    --find-toggle-active-fg: #ffffff;
+
+    --summary-triangle:  #8b949e;
+  }
+}
+
+/* ---------------------------------------------------------
+   Reset & base
+   --------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;  /* prevent body scroll; only #diff-content scrolls */
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ---------------------------------------------------------
+   Find bar  (top of window, hidden by default)
+   --------------------------------------------------------- */
+#find-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--find-bar-bg);
+  border-bottom: 1px solid var(--find-bar-border);
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+#find-bar.hidden { display: none; }
+
+#find-input {
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  padding: 3px 6px;
+  border: 1px solid var(--find-bar-border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  width: 240px;
+  outline: none;
+}
+
+#find-input:focus { border-color: #0366d6; }
+#find-input.no-match { border-color: #cb2431; background: #ffeef0; }
+
+.find-toggle {
+  font-family: var(--font-family);
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid var(--find-bar-border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.4;
+}
+
+.find-toggle[aria-pressed="true"] {
+  background: var(--find-toggle-active-bg);
+  color: var(--find-toggle-active-fg);
+  border-color: var(--find-toggle-active-bg);
+}
+
+.find-nav-btn {
+  font-size: 14px;
+  padding: 1px 6px;
+  border: 1px solid var(--find-bar-border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.find-nav-btn:hover { background: var(--outline-hover); }
+
+#find-close {
+  margin-left: 2px;
+  font-size: 14px;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+#find-close:hover { background: var(--outline-hover); }
+
+/* ---------------------------------------------------------
+   File outline  (static nav section at top)
+   --------------------------------------------------------- */
+#file-outline {
+  flex-shrink: 0;
+  background: var(--outline-bg);
+  border-bottom: 1px solid var(--outline-border);
+  padding: 6px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  align-items: baseline;
+}
+
+#outline-controls {
+  display: flex;
+  gap: 6px;
+  margin-right: 10px;
+}
+
+.outline-ctrl-btn {
+  font-family: var(--font-family);
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--outline-border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.outline-ctrl-btn:hover { background: var(--outline-hover); }
+
+.outline-file {
+  font-size: 12px;
+  color: var(--fg);
+  white-space: nowrap;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.outline-file:hover { background: var(--outline-hover); }
+
+.outline-status {
+  margin-right: 4px;
+}
+
+/* ---------------------------------------------------------
+   Diff content area  (scrollable)
+   --------------------------------------------------------- */
+#diff-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 0;
+}
+
+/* ---------------------------------------------------------
+   Large diff gate
+   --------------------------------------------------------- */
+#large-diff-gate {
+  padding: 24px;
+  color: var(--hunk-fg);
+}
+
+#large-diff-gate a {
+  color: #0366d6;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------
+   File sections
+   --------------------------------------------------------- */
+.file-section {
+  border-bottom: 1px solid var(--border);
+}
+
+.file-section > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 5px 10px;
+  background: var(--outline-bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  font-size: 13px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.file-section > summary::before {
+  content: "▶";
+  font-size: 10px;
+  color: var(--summary-triangle);
+  display: inline-block;
+  transition: transform 0.12s ease;
+  flex-shrink: 0;
+}
+
+.file-section[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.file-section > summary::-webkit-details-marker { display: none; }
+
+.file-path {
+  font-family: var(--font-family);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.file-status-icon { font-size: 14px; }
+
+/* ---------------------------------------------------------
+   Diff table
+   --------------------------------------------------------- */
+table.diff-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--font-size);
+  font-family: var(--font-family);
+  line-height: 1.45;
+}
+
+td, th { padding: 0; }
+
+/* Line number columns */
+td.ln-old, td.ln-new {
+  width: 1%;
+  min-width: 44px;
+  text-align: right;
+  padding: 0 8px;
+  color: var(--lineno-fg);
+  border-right: 1px solid var(--lineno-border);
+  user-select: none;
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+/* Content column */
+td.content {
+  padding: 0 8px;
+  white-space: pre;
+  vertical-align: top;
+  width: 100%;
+}
+
+/* Row types */
+tr.line-added td.ln-old  { background: var(--added-bg); }
+tr.line-added td.ln-new  { background: var(--added-bg); }
+tr.line-added td.content { background: var(--added-bg); }
+
+tr.line-removed td.ln-old  { background: var(--removed-bg); }
+tr.line-removed td.ln-new  { background: var(--removed-bg); }
+tr.line-removed td.content { background: var(--removed-bg); }
+
+tr.line-hunk td {
+  background: var(--hunk-bg);
+  color: var(--hunk-fg);
+  padding: 2px 8px;
+  font-style: italic;
+}
+
+tr.line-noeol td {
+  color: var(--lineno-fg);
+  font-style: italic;
+  padding: 0 8px;
+}
+
+/* Trailing whitespace highlight on added lines */
+.trailing-ws {
+  background: var(--trailing-ws-bg);
+}
+
+/* Find highlights */
+mark.find-match {
+  background: var(--find-highlight);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0;
+}
+
+mark.find-current {
+  background: var(--find-current);
+  color: #000;
+}
+
+/* ---------------------------------------------------------
+   Wrap-around overlay
+   --------------------------------------------------------- */
+#wrap-overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 72px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 9999;
+  user-select: none;
+}
+
+#wrap-overlay.visible {
+  opacity: 0.85;
+}

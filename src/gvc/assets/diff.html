@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="light dark">
+  <title>gvc</title>
+  <style>
+/* INLINE_CSS */
+  </style>
+</head>
+<body>
+
+  <!-- Find bar (hidden by default) -->
+  <div id="find-bar" class="hidden">
+    <input type="text" id="find-input" placeholder="Find" autocomplete="off" spellcheck="false">
+    <button class="find-toggle" id="btn-case"  title="Case Sensitive (match upper/lower)" aria-pressed="false">Aa</button>
+    <button class="find-toggle" id="btn-word"  title="Whole Word" aria-pressed="false">W</button>
+    <button class="find-toggle" id="btn-regex" title="Use Regular Expression" aria-pressed="false">.*</button>
+    <button class="find-nav-btn" id="btn-find-prev" title="Previous Match (⇧⌘G)">↑</button>
+    <button class="find-nav-btn" id="btn-find-next" title="Next Match (⌘G)">↓</button>
+    <button id="find-close" title="Close (Escape)">✕</button>
+  </div>
+
+  <!-- File outline -->
+  <nav id="file-outline">
+<!-- OUTLINE_HTML -->
+  </nav>
+
+  <!-- Diff content -->
+  <div id="diff-content">
+<!-- DIFF_HTML -->
+  </div>
+
+  <!-- Wrap-around overlay -->
+  <div id="wrap-overlay">⟳</div>
+
+  <script>
+/* INLINE_JS */
+  </script>
+</body>
+</html>

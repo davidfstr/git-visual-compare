@@ -103,6 +103,10 @@ def main() -> None:
     )
     t.start()
 
+    # Hidden sentinel window — keeps the Cocoa event loop alive after all
+    # visible diff windows are closed (standard macOS document-app behaviour).
+    webview.create_window("gvc", html="", hidden=True)
+
     # Open the first window from the temp file path in argv
     from gvc._ipc import read_tmp_file
 

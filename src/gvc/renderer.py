@@ -38,7 +38,7 @@ def _assets() -> tuple[str, str, str]:
 # ---------------------------------------------------------------------------
 
 _STATUS_ICONS = {
-    "added":    ("✚", "Added"),
+    "added":    ("➕", "Added"),
     "deleted":  ("❌", "Deleted"),
     "modified": ("✏️", "Modified"),
     "renamed":  ("⧉", "Renamed"),
@@ -112,25 +112,25 @@ def _render_file(fd: "FileDiff", idx: int) -> str:
                 '<tr class="line-hunk">'
                 '<td class="ln-old"></td>'
                 '<td class="ln-new"></td>'
-                f'<td class="content">{_e(hunk.header)}</td>'
+                f'<td class="content"><span class="line-marker"> </span>{_e(hunk.header)}</td>'
                 '</tr>'
             )
             for line in hunk.lines:
                 if line.kind == "added":
                     row_class = "line-added"
-                    prefix = "+"
+                    marker = "+"
                 elif line.kind == "removed":
                     row_class = "line-removed"
-                    prefix = "−"
+                    marker = "-"
                 elif line.kind == "context":
                     row_class = "line-context"
-                    prefix = " "
+                    marker = " "
                 elif line.kind == "noeol":
                     parts.append(
                         '<tr class="line-noeol">'
                         '<td class="ln-old"></td>'
                         '<td class="ln-new"></td>'
-                        f'<td class="content">{_e(line.text)}</td>'
+                        f'<td class="content"><span class="line-marker"> </span>{_e(line.text)}</td>'
                         '</tr>'
                     )
                     continue
@@ -142,7 +142,7 @@ def _render_file(fd: "FileDiff", idx: int) -> str:
                     f'<tr class="{row_class}">'
                     f'<td class="ln-old">{_lineno(line.old_lineno)}</td>'
                     f'<td class="ln-new">{_lineno(line.new_lineno)}</td>'
-                    f'<td class="content">{content_html}</td>'
+                    f'<td class="content"><span class="line-marker">{marker}</span>{content_html}</td>'
                     '</tr>'
                 )
         parts.append('</tbody></table>')

@@ -85,3 +85,266 @@ Future extensions:
 
 Attached reference:
 - @inception-screenshots
+
+Please ask me any questions to fill in requirements gaps.                       
+  ⎿  Read plan/inception.md (88 lines)
+
+--------------------------------------------------------------------------------
+⏺ I've read through the inception doc. Here are my questions, grouped by area:
+
+  CLI & Git Integration
+  1. Should gvc work only inside a git repo, or should it also accept paths to
+  repos (e.g. gvc -C /path/to/repo diff ...)?
+  2. For git diff syntax passthrough — should gvc also support git log -p style
+  output, or strictly git diff?
+  3. Should gvc support diffing staged changes (--cached/--staged) and working
+  tree changes (no args)?
+
+  Window & UI Behavior
+  4. Should multiple gvc invocations open separate windows, or reuse an existing
+   window (like how gitx behaves)?
+  5. Any preference on default window size or position? Should it remember its
+  last position/size?
+  6. Should the file outline at the top show file status indicators (A/M/D/R)
+  and/or line count changes (+N/-M)?
+  7. For the collapsible file sections — should they default to expanded or
+  collapsed? Should there be an "expand all / collapse all" toggle?
+
+  Diff Display
+  8. Do you want line numbers displayed in the diff (old line number, new line
+  number, or both)?
+  9. Should clicking a line number or file name copy anything to the clipboard
+  (e.g. filename:line for pasting into an editor)?
+  10. Any preference on font / font size? Monospace system default, or a
+  specific font? Should font size be adjustable (Cmd+/Cmd-)?
+
+  Find
+  11. Should Find support case-insensitive matching, regex, or just simple
+  substring?
+  12. Should there be a visual indicator of match count (e.g. "3 of 17
+  matches")?
+
+  Packaging & Distribution
+  13. What Python version should be the minimum target? 3.10+? 3.12+?
+  14. Should gvc be installable via pip/pipx as well, or only as a bundled .app?
+
+  Scope
+  15. Any preferences on how errors are shown (e.g. invalid git args, not in a
+  repo)? In the UI window, or just stderr before the window opens?
+  16. Should there be any keyboard shortcuts beyond Find (e.g. Cmd+W to close,
+  Cmd+Q to quit)?
+
+--------------------------------------------------------------------------------
+❯ 1. `gvc -C /path/to/repo diff ...` should be a "Future extension"             
+2. Only `git diff` for now                                                      
+3. Yes                                                                          
+                                                                                
+4. Separate windows, same as GitX                                               
+5. Remember last size & position. Open stacked window X pixels to the right of  
+the last-opened window. Initial size/position is wide enough to show about 100  
+column and tall enough to go from top of screen to bottom.                      
+6. File status indicators at minimum. Icons (including emoji) OK for this       
+purpose. See plan/inception-screenshots/4.png as a reference.                   
+7. Default expanded. Add an "expand all / collapse all" toggle.                 
+                                                                                
+8. Both. See plan/inception-screenshots/3.png as a reference.                   
+9. Not at this time.                                                            
+10. Monospace system default for now. Adjustable font size, which applies to    
+all windows and is remembered. Cmd+/Cmd- as hotkeys to trigger.                 
+                                                                                
+11. Support: case-insensitive matching, regex, whole word match.                
+12. No match count indicator. However a Find Next/Previous that wraps around    
+should briefly flash a giant "wrapped around" icon in the center of the window. 
+ Something like ⟳.                                                              
+                                                                                
+13. Python 3.14+                                                                
+14. Support install/run by pip/pipx/uv in addition to .app.                     
+                                                                                
+15. Just stderr (with an error code) before the window opens.                   
+16. Cmd+W to close, Cmd+Q to quit. Find shortcuts. Font size change shortcuts.  
+
+⏺ Let me check the referenced screenshots.
+
+  Searched for 1 pattern, read 4 files (ctrl+o to expand)
+
+⏺ Thanks, the screenshots are very helpful. I can see the GitX style clearly —
+  dual line numbers (old/new), colored backgrounds for add/remove, seam lines
+  with @@ markers, collapsible file headers with disclosure triangles. A few
+  more questions:
+
+  Diff Display Details
+  1. In screenshot 3, I see GitX uses a light green background for added lines
+  and light red/pink for removed. For dark mode — do you have specific color
+  preferences, or should I pick reasonable dark-mode equivalents (dark green
+  tint / dark red tint)?
+  2. The seam/hunk lines (@@...@@) in GitX appear with a blue/purple background.
+   Same question for dark mode — pick reasonable equivalents?
+  3. In screenshot 1, I see GitX shows the file header as a clickable disclosure
+   triangle with the file path (e.g. src/crystal/model.py). Should the file
+  header also show the diff mode (e.g. "modified", "new file", "deleted",
+  "renamed")?
+
+  File Outline
+  4. Screenshot 4 shows the file list at top with file icons. Should the outline
+   be a fixed/sticky header that stays visible as you scroll the diff, or just a
+   static section at the top?
+
+  Find Bar
+  5. Should the Find bar appear at the top or bottom of the window (like Safari
+  vs VS Code)?
+  6. For regex and whole-word toggles — small toggle buttons in the Find bar
+  (like VS Code), or a separate dropdown/menu?
+
+  Window Behavior
+  7. When you say "stacked X pixels to the right" — should it also offset Y
+  pixels down, or just shift horizontally?
+  8. Cmd+W closes the current window. If it's the last window, should the app
+  quit or stay running with no windows (macOS convention for document apps)?
+
+  pywebview Specifics
+  9. pywebview windows don't natively get a macOS menu bar with Edit > Find. Are
+   you OK with Find being only via keyboard shortcut, or do you want a menu bar
+  with at minimum File (Close Window, Quit) and Edit (Find, Find Next, Find
+  Previous)?
+
+--------------------------------------------------------------------------------
+❯ 1. No specific color preferences. Please pick reasonable dark-mode            
+equivalents. I am mildly red-green colorblind and cannot effectively evaluate   
+color choices, other than color contrast.                                       
+2. Yes                                                                          
+3. No need. Add/edit/remove is easy to infer from context. Renames are          
+interesting, see new screenshot: plan/inception-screenshots/5.png               
+                                                                                
+4. Start with a static section at the top. Add fixed/sticky header as a "Future 
+ extension" idea                                                                
+                                                                                
+5. Top of the window                                                            
+6. small toggle buttons in the Find bar (like VS Code)                          
+                                                                                
+7. also offset Y pixels down. However in the common case where the window is    
+full top-to-bottom of the screen there will be no room to shift downward, so    
+the net effect in that common case will be to just shift X pixels right.        
+8. Stay running                                                                 
+                                                                                
+9. Close (Cmd-W) and Quit (Cmd-Q) are must-have keyboard shortcuts, although I  
+could live without the corresponding menus/menuitems in an initial              
+implementation.                                                                 
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ I see — renames get a special header like "Dockerfile.lambda renamed to
+  src/crystal_on_aws/Dockerfile.lambda" with both old and new paths. Good
+  detail. A few final questions:
+
+  Renames
+  1. Should rename detection be on by default (equivalent to git diff -M)? Any
+  preference on the similarity threshold?
+
+  Accessibility / Color
+  2. Given you're mildly red-green colorblind — would you prefer I avoid pure
+  red/green and instead use red-orange / blue-green (a common
+  colorblind-friendly palette)? Or stick with the traditional GitX red/green and
+   you'll let me know if it's a problem?
+
+  Context Lines
+  3. The inception doc mentions -U20 for controlling context lines. Should gvc
+  have a default context line count different from git's default of 3? Or keep
+  git's default and let the user pass -U on the command line?
+
+  Binary Files / Large Diffs
+  4. How should binary files in a diff be handled? Just show "Binary file
+  differs" like git does?
+  5. Should there be any guard for extremely large diffs (e.g. thousands of
+  files or megabyte-sized diffs)? Or just let the browser handle it?
+
+  Command Name
+  6. The doc proposes gvc. Any concern about conflicts with existing tools?
+  Should there be a longer fallback name (e.g. git-visual-compare)?
+
+  Versioning
+  7. What version number should v1 ship as? 0.1.0? 1.0.0?
+
+  I think after these answers I'll have enough to write a complete requirements
+  spec. Anything else you want to add that I haven't asked about?
+
+--------------------------------------------------------------------------------
+❯ 1. Yes. No specific preference. If a "patience" diff implies a particular     
+threshold, suggest starting with that.                                          
+2. Stick with the traditional colors for now.                                   
+                                                                                
+3. Keep git's default. We should try to behave like git's default diff output   
+in most circumstances. Allow override with -U on command line.                  
+                                                                                
+4. Yes                                                                          
+5. Guard. Suggest the behavior in new screenshot:                               
+plan/inception-screenshots/6.png I'm not sure what a reasonable threshold       
+should be.                                                                      
+                                                                                
+6. Just gvc for now.                                                            
+                                                                                
+7. Start with 1.0.0.                                                            
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Got it — GitHub-style "large diff" gate with a click-to-reveal. For the
+  threshold, I'd suggest something like: if the total diff output exceeds 1 MB
+  or 10,000 lines, show a warning like "This is a large diff (X files, Y lines).
+   Click here to load." with a button/link to proceed. That roughly matches what
+   GitHub does. Does that seem reasonable?
+
+  One last question I realized I missed:
+
+  Tab rendering
+  1. Should tabs in diff content be rendered as a fixed width (e.g. 4 spaces, 8
+  spaces), or follow some other convention?
+
+  And to confirm my understanding on a couple of points:
+  - For -M (rename detection): git's default threshold is 50% similarity, and
+  "patience" diff is an algorithm (--patience), not a rename threshold. I'll use
+   git's default -M (50%) for rename detection. Sound right?
+  - The large diff guard applies per-window (total diff size), not per-file.
+  Correct?
+
+--------------------------------------------------------------------------------
+❯ > "This is a large diff (X files, Y lines). Click here to load." with a       
+button/link to proceed.                                                         
+                                                                                
+Sounds good.                                                                    
+                                                                                
+1. Prefer the traditional macOS convention of 4-columns per tab.                
+                                                                                
+> I'll use git's default -M (50%) for rename detection. Sound right?            
+                                                                                
+Yes, prefer git's default.                                                      
+                                                                                
+> The large diff guard applies per-window (total diff size), not per-file.      
+Correct?                                                                        
+                                                                                
+Correct.                                                                        
+
+⏺ Good, I have everything I need. Let me write the requirements spec and save
+  what I've learned about you.
+
+  Wrote 2 memories (ctrl+o to expand)
+
+⏺ Now let me write the requirements spec.
+
+⏺ Write(plan/requirements.md)
+  ⎿  Wrote 215 lines to plan/requirements.md
+       1 # Git Visual Compare (gvc) — Requirements Specification
+       2 
+       3 **Version:** 1.0.0  
+       4 **Date:** 2026-03-31
+       5 
+       6 ## Overview
+       7 
+       8 `gvc` is a lightweight GUI tool for viewing `git diff` output in
+          a native macOS
+       9 window, using a style closely matching GitX's `--diff` mode. It 
+         is implemented
+      10 in Python using pywebview for the UI layer and the locally insta
+         lled `git` for
+     … +205 lines (ctrl+o to expand)
+
+⏺ Written to plan/requirements.md. Review it and let me know if anything needs
+  adjusting — happy to refine before we move to implementation planning.

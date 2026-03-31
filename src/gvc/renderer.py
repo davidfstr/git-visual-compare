@@ -38,11 +38,11 @@ def _assets() -> tuple[str, str, str]:
 # ---------------------------------------------------------------------------
 
 _STATUS_ICONS = {
-    "added":    ("🟢", "Added"),
-    "deleted":  ("🔴", "Deleted"),
-    "modified": ("🟡", "Modified"),
-    "renamed":  ("🔵", "Renamed"),
-    "binary":   ("⬜", "Binary"),
+    "added":    ("✚", "Added"),
+    "deleted":  ("❌", "Deleted"),
+    "modified": ("✏️", "Modified"),
+    "renamed":  ("⧉", "Renamed"),
+    "binary":   ("📄", "Binary"),
 }
 
 
@@ -164,9 +164,9 @@ def _render_outline(file_diffs: list["FileDiff"]) -> str:
         '</div>'
     )
     for idx, fd in enumerate(file_diffs):
-        icon, label = _STATUS_ICONS.get(fd.status, ("⬜", fd.status.capitalize()))
+        icon, label = _STATUS_ICONS.get(fd.status, ("📄", fd.status.capitalize()))
         if fd.status == "renamed":
-            name = _e(fd.new_path or fd.old_path)
+            name = _e(f"{fd.old_path} → {fd.new_path}")
         else:
             name = _e(fd.new_path or fd.old_path)
         parts.append(

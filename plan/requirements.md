@@ -209,7 +209,6 @@ The following settings are persisted across sessions:
 Listed here for reference; explicitly out of scope for v1.0.0:
 
 - `gvc -C /path/to/repo diff ...` (run against a specific repo)
-- Fixed/sticky file outline header that stays visible while scrolling
 - Menu bar (File: Close Window, Quit; Edit: Find, Find Next, Find Previous)
 - Automatic updates via appcast / Sparkle-style mechanism
 - About box

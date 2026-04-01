@@ -30,9 +30,9 @@ def _open_window(raw: bytes, title: str, api, prefs_loader) -> None:
     large = is_large(raw)
     if large:
         s = large_sentinel(raw)[0]
-        html_doc = render([], large=True, raw_size=s.raw_size, raw_lines=s.raw_lines, title=title)
+        html_doc = render([], large=True, raw_size=s.raw_size, raw_lines=s.raw_lines)
     else:
-        html_doc = render(parse(raw), title=title)
+        html_doc = render(parse(raw))
 
     create_window(html_doc, title, prefs, api)
 
@@ -100,6 +100,11 @@ def main() -> None:
 
     from gvc.app_api import AppApi
     from gvc.prefs import Prefs
+    from gvc.window_manager import _disable_automatic_tabbing
+
+    # Disable macOS automatic window tabbing before creating any windows,
+    # otherwise every window gets a tab bar that duplicates the title.
+    _disable_automatic_tabbing()
 
     # Single shared AppApi for all windows in this process
     api = AppApi(Prefs.load())

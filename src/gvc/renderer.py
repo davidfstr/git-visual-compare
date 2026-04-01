@@ -200,7 +200,6 @@ def render(
     large: bool = False,
     raw_size: int = 0,
     raw_lines: int = 0,
-    title: str = "gvc",
 ) -> str:
     """Return a complete HTML document string for the given diff."""
     css, js, template = _assets()
@@ -220,6 +219,5 @@ def render(
     doc = doc.replace("/* INLINE_JS */", js)
     doc = doc.replace("<!-- OUTLINE_HTML -->", outline_html)
     doc = doc.replace("<!-- DIFF_HTML -->", diff_html)
-    doc = doc.replace("<title>gvc</title>", f"<title>{_e(title)}</title>")
 
     return doc

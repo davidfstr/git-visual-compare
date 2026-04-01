@@ -59,6 +59,17 @@ def _get_screen_frame() -> tuple[int, int, int, int]:
     return 0, 0, 1440, 900
 
 
+def _disable_automatic_tabbing() -> None:
+    """Disable macOS automatic window tabbing at the class level.
+
+    Must be called once before any windows are created.  Without this,
+    every NSWindow gets an ``NSTabBar`` accessory view that duplicates
+    the window title as a tab label.
+    """
+    import AppKit  # type: ignore
+    AppKit.NSWindow.setAllowsAutomaticWindowTabbing_(False)
+
+
 def create_window(
     html: str,
     title: str,
@@ -109,11 +120,8 @@ def create_window(
     def on_shown() -> None:
         # Bring the app to the front so the new window isn't hidden behind
         # other apps (pywebview doesn't do this automatically on macOS).
-        try:
-            import AppKit  # type: ignore
-            AppKit.NSApp.activateIgnoringOtherApps_(True)
-        except Exception:
-            pass
+        import AppKit  # type: ignore
+        AppKit.NSApp.activateIgnoringOtherApps_(True)
 
     def on_closed() -> None:
         api.unregister_window(window)

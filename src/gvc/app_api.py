@@ -34,6 +34,11 @@ class AppApi:
             except ValueError:
                 pass
 
+    def open_windows(self) -> "list[webview.Window]":
+        """Return a snapshot of currently open diff windows."""
+        with self._lock:
+            return list(self._windows)
+
     # ------------------------------------------------------------------
     # API methods callable from JavaScript
     # ------------------------------------------------------------------
@@ -59,8 +64,3 @@ class AppApi:
             except Exception:
                 pass
 
-    def save_window_geometry(
-        self, x: int, y: int, width: int, height: int
-    ) -> None:
-        """Called from JS when the window is moved or resized."""
-        self._prefs.record_window_geometry(int(x), int(y), int(width), int(height))

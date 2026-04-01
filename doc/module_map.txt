@@ -74,9 +74,9 @@ Here's a complete picture of the system:
 | `_ipc.py` | Stateless IPC helpers: socket path, temp file read/write, socket send. |
 | `diff_parser.py` | Parses unified diff bytes → `list[FileDiff]` dataclass tree. |
 | `renderer.py` | Converts `list[FileDiff]` → self-contained HTML string. Loads assets once, caches. |
-| `window_manager.py` | Creates pywebview windows. Handles screen geometry, cascading stacking, focus, geometry tracker injection. |
-| `app_api.py` | JS↔Python bridge. Single instance shared across all windows. Handles font size (with broadcast) and geometry saves. |
-| `prefs.py` | Persistent JSON settings. Atomic writes via `fcntl` + `os.replace`. |
+| `window_manager.py` | Creates pywebview windows. Handles screen geometry, cascading stacking (based on existing open windows), focus. |
+| `app_api.py` | JS↔Python bridge. Single instance shared across all windows. Handles font size (with broadcast). Tracks open window list. |
+| `prefs.py` | Persistent JSON settings. Currently stores `font_size` only. Atomic writes via `fcntl` + `os.replace`. |
 | `assets/diff.html` | Shell template with `/* INLINE_CSS */`, `<!-- OUTLINE_HTML -->` etc. placeholders. |
 | `assets/diff.css` | All theming. Light/dark via CSS custom properties + `@media prefers-color-scheme`. |
 | `assets/diff.js` | Find bar, keyboard shortcuts, font size, collapse/expand, wrap-around flash. |
@@ -99,7 +99,6 @@ JS                                   Python (AppApi)
 ──                                   ───────────────
 window.pywebview.api.get_prefs()  →  returns {font_size}
 window.pywebview.api.set_font_size(n) →  saves prefs, broadcasts applyFontSize(n) to all windows
-window.pywebview.api.save_window_geometry(x,y,w,h) →  prefs.record_window_geometry()
 ```
 
 ---
@@ -109,7 +108,7 @@ window.pywebview.api.save_window_geometry(x,y,w,h) →  prefs.record_window_geom
 | What | Path |
 |---|---|
 | Socket | `~/Library/Application Support/../Caches/TemporaryItems/gvc/gui.sock` (user_runtime_dir) |
-| Prefs | `~/Library/Application Support/gvc/prefs.json` (user_data_dir) |
+| Prefs | `~/Library/Application Support/gvc/prefs.json` (user_data_dir) — stores `font_size` |
 | Temp diff files | `NSTemporaryDirectory()` (NamedTemporaryFile, deleted after reading) |
 
 ---
@@ -119,6 +118,7 @@ window.pywebview.api.save_window_geometry(x,y,w,h) →  prefs.record_window_geom
 - **No HTTP server** — `load_html()` with fully inlined CSS/JS; no network port needed
 - **Socket bound before webview import** — minimises race window for concurrent CLI invocations
 - **Hidden sentinel window** — keeps the Cocoa event loop alive after all diff windows close
+- **Window geometry from live state** — cascading position/size derived from `api.open_windows()` at creation time, not persisted to disk
 - **CSS media query dark mode** — no JS polling; WKWebView reacts to system appearance change live
 - **`<details>`/`<summary>`** — collapsible file sections with zero JS required for the toggle itself
 - **`os.fork()` explicitly avoided** — incompatible with Cocoa; subprocess is used instead

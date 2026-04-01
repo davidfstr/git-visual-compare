@@ -21,7 +21,7 @@ def _open_window(raw: bytes, title: str, api, prefs_loader) -> None:
     """Parse diff bytes and open a new diff window. Thread-safe."""
     from gvc.diff_parser import is_large, large_sentinel, parse
     from gvc.renderer import render
-    from gvc.window_manager import create_window, inject_geometry_tracker
+    from gvc.window_manager import create_window
 
     prefs = prefs_loader()
 
@@ -32,8 +32,7 @@ def _open_window(raw: bytes, title: str, api, prefs_loader) -> None:
     else:
         html_doc = render(parse(raw), title=title)
 
-    window = create_window(html_doc, title, prefs, api)
-    window.events.loaded += lambda: inject_geometry_tracker(window)
+    create_window(html_doc, title, prefs, api)
 
 
 def _socket_listener(server_sock: socket.socket, api, prefs_loader) -> None:

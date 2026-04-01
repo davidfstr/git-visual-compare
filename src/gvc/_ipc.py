@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-import socket
 from pathlib import Path
-
 import platformdirs
+import socket
+import traceback
 
 
 def gui_socket_path() -> Path:
@@ -64,4 +64,5 @@ def try_send(sock_path: Path, tmp_path: Path) -> bool:
         sock_path.unlink(missing_ok=True)
         return False
     except Exception:
+        traceback.print_exc()
         return False

@@ -41,21 +41,18 @@ def _get_screen_frame() -> tuple[int, int, int, int]:
     Uses AppKit directly so this works before webview.start() is called.
     Falls back to a safe 1440×900 assumption if AppKit is unavailable.
     """
-    try:
-        import AppKit  # type: ignore
-        screen = AppKit.NSScreen.mainScreen()
-        if screen:
-            vf = screen.visibleFrame()
-            sf = screen.frame()
-            screen_h = int(sf.size.height)
-            x = int(vf.origin.x)
-            # Convert from bottom-left Cocoa origin to top-left pywebview origin
-            y = screen_h - int(vf.origin.y) - int(vf.size.height)
-            w = int(vf.size.width)
-            h = int(vf.size.height)
-            return x, y, w, h
-    except Exception:
-        pass
+    import AppKit  # type: ignore
+    screen = AppKit.NSScreen.mainScreen()
+    if screen:
+        vf = screen.visibleFrame()
+        sf = screen.frame()
+        screen_h = int(sf.size.height)
+        x = int(vf.origin.x)
+        # Convert from bottom-left Cocoa origin to top-left pywebview origin
+        y = screen_h - int(vf.origin.y) - int(vf.size.height)
+        w = int(vf.size.width)
+        h = int(vf.size.height)
+        return x, y, w, h
     return 0, 0, 1440, 900
 
 

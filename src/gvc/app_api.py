@@ -59,8 +59,5 @@ class AppApi:
         with self._lock:
             windows = list(self._windows)
         for w in windows:
-            try:
-                w.evaluate_js(js)
-            except Exception:
-                pass
+            w.evaluate_js(js)
 

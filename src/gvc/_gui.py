@@ -17,6 +17,7 @@ import platformdirs
 import socket
 import sys
 import threading
+import traceback
 
 
 def _open_window(raw: bytes, title: str, api, prefs_loader) -> None:
@@ -65,7 +66,8 @@ def _socket_listener(server_sock: socket.socket, api, prefs_loader) -> None:
             raw, title = read_tmp_file(tmp_path)
             _open_window(raw, title, api, prefs_loader)
         except Exception:
-            pass  # Never crash the listener
+            # Never crash the listener
+            traceback.print_exc()
 
 
 def main() -> None:

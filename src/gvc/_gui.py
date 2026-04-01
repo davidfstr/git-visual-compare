@@ -11,10 +11,12 @@ Persistent GUI server process.
 
 from __future__ import annotations
 
+import datetime as dt
+from pathlib import Path
+import platformdirs
 import socket
 import sys
 import threading
-from pathlib import Path
 
 
 def _open_window(raw: bytes, title: str, api, prefs_loader) -> None:
@@ -69,6 +71,14 @@ def _socket_listener(server_sock: socket.socket, api, prefs_loader) -> None:
 def main() -> None:
     if len(sys.argv) < 2:
         sys.exit("usage: python -m gvc._gui <tmpfile>")
+    
+    # Redirect stderr to a persistent log file so tracebacks are observable.
+    log_dirpath = Path(platformdirs.user_log_dir("gvc"))
+    log_dirpath.mkdir(parents=True, exist_ok=True)
+    log_filepath = log_dirpath / "gvc.log"
+    # NOTE: Replace log whenever process restarts, to prevent growing without bound
+    sys.stderr = log_filepath.open("w", buffering=1)
+    print(f"gvc started {dt.datetime.now().isoformat(timespec='seconds')}", file=sys.stderr, flush=True)
 
     # ------------------------------------------------------------------
     # Bind the socket FIRST — before importing webview — so that a second

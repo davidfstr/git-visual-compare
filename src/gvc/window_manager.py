@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-
 import webview
 
 if TYPE_CHECKING:
@@ -20,6 +19,18 @@ _DEFAULT_WIDTH = 1200
 # How far each new window is offset from the previous one
 _STACK_X = 30
 _STACK_Y = 30
+
+
+def _is_dark_mode() -> bool:
+    """Return True if the OS is currently in Dark Mode.
+
+    Uses NSUserDefaults rather than NSApp.effectiveAppearance() because this
+    is called before webview.start() initialises the Cocoa application, at
+    which point NSApp is still None.
+    """
+    from Foundation import NSUserDefaults  # type: ignore
+    defaults = NSUserDefaults.standardUserDefaults()
+    return defaults.stringForKey_("AppleInterfaceStyle") == "Dark"
 
 
 def _get_screen_frame() -> tuple[int, int, int, int]:
@@ -88,6 +99,9 @@ def create_window(
         y=y,
         resizable=True,
         text_select=True,
+        # Match the WebView's initial background to the OS appearance so there
+        # is no white flash during the window-open animation in dark mode.
+        background_color="#0d1117" if _is_dark_mode() else "#ffffff",
     )
 
     api.register_window(window)

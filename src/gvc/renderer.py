@@ -41,7 +41,7 @@ _STATUS_ICONS = {
     "added":    ("➕", "Added"),
     "deleted":  ("❌", "Deleted"),
     "modified": ("✏️", "Modified"),
-    "renamed":  ("⧉", "Renamed"),
+    "renamed":  ("🚚", "Renamed"),
     "binary":   ("📄", "Binary"),
 }
 

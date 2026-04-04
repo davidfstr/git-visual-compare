@@ -44,7 +44,7 @@ def _socket_listener(server_sock: socket.socket, api, prefs_loader) -> None:
     Each connection sends a single temp file path (UTF-8, no framing needed
     since the connection is closed after sending).
     """
-    from gvc._ipc import read_tmp_file
+    from gvc._ipc import GuiRequest
 
     server_sock.settimeout(1.0)
 
@@ -63,8 +63,8 @@ def _socket_listener(server_sock: socket.socket, api, prefs_loader) -> None:
                 chunks.append(chunk)
             conn.close()
             tmp_path = Path(b"".join(chunks).decode("utf-8").strip())
-            raw, title = read_tmp_file(tmp_path)
-            _open_window(raw, title, api, prefs_loader)
+            req = GuiRequest.read_from(tmp_path)
+            _open_window(req.diff_bytes, req.title, api, prefs_loader)
         except Exception:
             # Never crash the listener
             traceback.print_exc()
@@ -124,10 +124,10 @@ def main() -> None:
     webview.create_window("gvc", html="", hidden=True)
 
     # Open the first window from the temp file path in argv
-    from gvc._ipc import read_tmp_file
+    from gvc._ipc import GuiRequest
 
-    raw, title = read_tmp_file(Path(sys.argv[1]))
-    _open_window(raw, title, api, Prefs.load)
+    req = GuiRequest.read_from(Path(sys.argv[1]))
+    _open_window(req.diff_bytes, req.title, api, Prefs.load)
 
     # Run the Cocoa event loop; returns only on Cmd+Q / webview.stop()
     webview.start(private_mode=False)

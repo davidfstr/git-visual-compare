@@ -1,60 +1,65 @@
 """Shared IPC helpers: socket path and temp-file protocol."""
 
-from __future__ import annotations
-
+from dataclasses import dataclass
 import json
 from pathlib import Path
 import platformdirs
 import socket
+import tempfile
 import traceback
 
 
+@dataclass(frozen=True)
+class GuiRequest:
+    title: str
+    diff_bytes: bytes
+
+    def write_to(self, filepath: Path) -> None:
+        """Write request to the given filepath."""
+        meta = json.dumps({"title": self.title})
+        data = meta.encode("utf-8") + b"\n" + self.diff_bytes
+        filepath.write_bytes(data)
+
+    def write_to_temp_file(self) -> Path:
+        """Write request to a new temp file and return its path."""
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".gvc", mode="wb") as f:
+            tmp_path = Path(f.name)
+            self.write_to(tmp_path)
+        return tmp_path
+
+    @staticmethod
+    def read_from(filepath: Path) -> GuiRequest:
+        """Read and delete a request file."""
+        data = filepath.read_bytes()
+        filepath.unlink(missing_ok=True)
+        newline = data.index(b"\n")
+        meta = json.loads(data[:newline])
+        raw = data[newline + 1 :]
+        return GuiRequest(title=meta.get("title", "gvc"), diff_bytes=raw)
+
+
 def gui_socket_path() -> Path:
-    """Return the path to the GUI server's Unix domain socket."""
+    """
+    Return the path to the GUI server's Unix domain socket,
+    which may or may not exist.
+    """
     d = Path(platformdirs.user_runtime_dir("gvc"))
     d.mkdir(parents=True, exist_ok=True)
     return d / "gui.sock"
 
 
-def write_tmp_file(raw: bytes, title: str) -> Path:
-    """
-    Write diff bytes + JSON metadata to a temp file.
-    Returns the path.  Caller is responsible for cleanup on error.
-    """
-    import tempfile
-
-    meta = json.dumps({"title": title})
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".gvc", mode="wb") as f:
-        f.write(meta.encode("utf-8"))
-        f.write(b"\n")
-        f.write(raw)
-        return Path(f.name)
-
-
-def read_tmp_file(path: Path) -> tuple[bytes, str]:
-    """
-    Read and delete a temp file written by write_tmp_file.
-    Returns (raw_diff_bytes, title).
-    """
-    data = path.read_bytes()
-    path.unlink(missing_ok=True)
-    newline = data.index(b"\n")
-    meta = json.loads(data[:newline])
-    raw = data[newline + 1 :]
-    return raw, meta.get("title", "gvc")
-
-
-def try_send(sock_path: Path, tmp_path: Path) -> bool:
+def try_send(sock_path: Path, request_filepath: Path) -> bool:
     """
     Try to connect to the GUI server and send the temp file path.
     Returns True on success, False if no server is listening.
+    
     Removes a stale socket file on ConnectionRefusedError.
     """
     try:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.settimeout(2.0)
         sock.connect(str(sock_path))
-        sock.sendall(str(tmp_path).encode("utf-8"))
+        sock.sendall(str(request_filepath).encode("utf-8"))
         sock.close()
         return True
     except FileNotFoundError:

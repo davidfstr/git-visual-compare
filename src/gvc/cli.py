@@ -1,6 +1,9 @@
 """
 gvc -- Git Visual Compare
-Entry point: run git diff, hand off diff data to the persistent GUI process.
+
+Entry point:
+- Runs git diff
+- Hand offs diff data to the persistent GUI server process
 """
 
 import subprocess
@@ -29,18 +32,24 @@ def main() -> None:
         sys.stderr.buffer.write(result.stderr)
         sys.exit(result.returncode)
 
-    from gvc._ipc import gui_socket_path, try_send, write_tmp_file
+    from gvc._ipc import GuiRequest, gui_socket_path, try_send
 
+    req = GuiRequest(
+        title=_build_title(args),
+        diff_bytes=result.stdout,
+    )
+    request_filepath = req.write_to_temp_file()
+    
+    # Create/notify GUI server of the request.
+    # The GUI server will clean up the request file after processing it.
     sock_path = gui_socket_path()
-    tmp_path = write_tmp_file(result.stdout, _build_title(args))
-
-    if try_send(sock_path, tmp_path):
+    if try_send(sock_path, request_filepath):
         # Existing GUI server accepted the request
         pass
     else:
         # No GUI server running. Launch one, with the initial request.
         subprocess.Popen(
-            [sys.executable, "-m", "gvc._gui", str(tmp_path)],
+            [sys.executable, "-m", "gvc._gui", str(request_filepath)],
             start_new_session=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

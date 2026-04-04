@@ -3,6 +3,7 @@
 ## Code Style
 
 - Python ≥ 3.14 required. Use modern syntax (type unions with `|`, etc.)
+- Strings use double quotes (`"`) rather than single quotes (`'`)
 - Always include `from __future__ import annotations` at the top of modules
     - NOTE: Will eliminate soon, because Python 3.14+ always uses deferred annotations, which supercede this future's effect
 - Use `TYPE_CHECKING` blocks for imports needed only by type checkers

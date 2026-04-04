@@ -237,7 +237,7 @@ implementation.
   detail. A few final questions:
 
   Renames
-  1. Should rename detection be on by default (equivalent to git diff -M)? Any
+  1. Should rename detection be on by default (equivalent to git diff --find-renames)? Any
   preference on the similarity threshold?
 
   Accessibility / Color
@@ -299,9 +299,9 @@ should be.
   spaces), or follow some other convention?
 
   And to confirm my understanding on a couple of points:
-  - For -M (rename detection): git's default threshold is 50% similarity, and
+  - For --find-renames (rename detection): git's default threshold is 50% similarity, and
   "patience" diff is an algorithm (--patience), not a rename threshold. I'll use
-   git's default -M (50%) for rename detection. Sound right?
+   git's default --find-renames (50%) for rename detection. Sound right?
   - The large diff guard applies per-window (total diff size), not per-file.
   Correct?
 
@@ -313,7 +313,7 @@ Sounds good.
                                                                                 
 1. Prefer the traditional macOS convention of 4-columns per tab.                
                                                                                 
-> I'll use git's default -M (50%) for rename detection. Sound right?            
+> I'll use git's default --find-renames (50%) for rename detection. Sound right?            
                                                                                 
 Yes, prefer git's default.                                                      
                                                                                 

@@ -47,7 +47,7 @@ gvc -U20 HEAD~1 HEAD # 20 lines of context
 
 ### 1.3 Rename Detection
 
-Rename detection is enabled by default (`-M` with git's default 50% threshold).
+Rename detection is enabled by default (`--find-renames` with git's default 50% threshold).
 
 ### 1.4 Error Handling
 

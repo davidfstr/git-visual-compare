@@ -9,7 +9,7 @@ Here's a complete picture of the system:
 │  User's terminal                                        │
 │  $ gvc HEAD~1 HEAD                                      │
 └────────────────────┬────────────────────────────────────┘
-                     │ subprocess.run("git diff -M ...")
+                     │ subprocess.run("git diff --find-renames ...")
                      ▼
 ┌─────────────────────────────────────────────────────────┐
 │  cli.py  — entry point                                  │

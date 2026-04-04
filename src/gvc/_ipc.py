@@ -60,7 +60,7 @@ def try_send(sock_path: Path, tmp_path: Path) -> bool:
     except FileNotFoundError:
         return False
     except ConnectionRefusedError:
-        # Stale socket file — remove it so the next launch starts fresh
+        # Stale socket file. Remove it so the next launch starts fresh.
         sock_path.unlink(missing_ok=True)
         return False
     except Exception:

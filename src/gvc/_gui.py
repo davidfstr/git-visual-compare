@@ -103,7 +103,7 @@ def main() -> None:
         sock_path.unlink(missing_ok=True)
         server_sock.bind(str(sock_path))
         try:
-            server_sock.listen(backlog=5)
+            server_sock.listen(5)  # maximum backlog of 5 pending connections
 
             # ------------------------------------------------------------------
             # Now load the heavier GUI dependencies

@@ -30,6 +30,10 @@ def _assets() -> tuple[str, str, str]:
         _CSS = _load_asset("diff.css")
         _JS = _load_asset("diff.js")
         _HTML_TEMPLATE = _load_asset("diff.html")
+    else:
+        assert _CSS is not None
+        assert _JS is not None
+        assert _HTML_TEMPLATE is not None
     return _CSS, _JS, _HTML_TEMPLATE
 
 

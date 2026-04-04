@@ -28,9 +28,11 @@ def _is_dark_mode() -> bool:
     is called before webview.start() initialises the Cocoa application, at
     which point NSApp is still None.
     """
-    from Foundation import NSUserDefaults  # type: ignore
+    from Foundation import NSUserDefaults
     defaults = NSUserDefaults.standardUserDefaults()
-    return defaults.stringForKey_("AppleInterfaceStyle") == "Dark"
+    result = defaults.stringForKey_("AppleInterfaceStyle") == "Dark"
+    assert isinstance(result, bool)
+    return result
 
 
 def _get_screen_frame() -> tuple[int, int, int, int]:
@@ -41,7 +43,7 @@ def _get_screen_frame() -> tuple[int, int, int, int]:
     Uses AppKit directly so this works before webview.start() is called.
     Falls back to a safe 1440×900 assumption if AppKit is unavailable.
     """
-    import AppKit  # type: ignore
+    import AppKit
     screen = AppKit.NSScreen.mainScreen()
     if screen:
         vf = screen.visibleFrame()
@@ -63,7 +65,7 @@ def disable_automatic_tabbing() -> None:
     every NSWindow gets an ``NSTabBar`` accessory view that duplicates
     the window title as a tab label.
     """
-    import AppKit  # type: ignore
+    import AppKit
     AppKit.NSWindow.setAllowsAutomaticWindowTabbing_(False)
 
 
@@ -117,7 +119,7 @@ def create_window(
     def on_shown() -> None:
         # Bring the app to the front so the new window isn't hidden behind
         # other apps (pywebview doesn't do this automatically on macOS).
-        import AppKit  # type: ignore
+        import AppKit
         AppKit.NSApp.activateIgnoringOtherApps_(True)
 
     def on_closed() -> None:

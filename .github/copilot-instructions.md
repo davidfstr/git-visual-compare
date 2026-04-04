@@ -47,6 +47,18 @@ gvc [git-diff-args...]
 
 No automated test suite yet.
 
+## Typecheck
+
+Run typechecking with: `venv/bin/mypy`
+
+This project uses mostly strict settings in `pyproject.toml`:
+- `disallow_untyped_defs = true` — All functions must have type annotations
+- `disallow_incomplete_defs = true` — Types must be fully specified
+- `warn_no_return = true` — Functions must explicitly return or have `-> None`
+
+It also uses this loose setting:
+- `ignore_missing_imports = true` — Allows untyped libraries (pyobjc) without errors
+
 ## Conventions
 
 - **Platform directories**: use `platformdirs` for all config/data/runtime/log paths — never hardcode `~/` paths

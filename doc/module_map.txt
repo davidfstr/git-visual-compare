@@ -27,7 +27,7 @@ Here's a complete picture of the system:
 │  startup:                                                    │
 │    1. Bind Unix socket (before importing webview)            │
 │    2. Import webview, create AppApi, start listener thread   │
-│    3. Create hidden sentinel window (keeps event loop alive) │
+│    3. Create hidden keepalive window (keeps event loop alive) │
 │    4. Open first diff window from argv[1]                    │
 │    5. webview.start() — blocks on Cocoa event loop forever   │
 │                                                              │
@@ -117,7 +117,7 @@ window.pywebview.api.set_font_size(n) →  saves prefs, broadcasts applyFontSize
 
 - **No HTTP server** — `load_html()` with fully inlined CSS/JS; no network port needed
 - **Socket bound before webview import** — minimises race window for concurrent CLI invocations
-- **Hidden sentinel window** — keeps the Cocoa event loop alive after all diff windows close
+- **Hidden keepalive window** — keeps the Cocoa event loop alive after all diff windows close
 - **Window geometry from live state** — cascading position/size derived from `api.open_windows()` at creation time, not persisted to disk
 - **CSS media query dark mode** — no JS polling; WKWebView reacts to system appearance change live
 - **`<details>`/`<summary>`** — collapsible file sections with zero JS required for the toggle itself

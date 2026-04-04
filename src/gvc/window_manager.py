@@ -56,7 +56,7 @@ def _get_screen_frame() -> tuple[int, int, int, int]:
     return 0, 0, 1440, 900
 
 
-def _disable_automatic_tabbing() -> None:
+def disable_automatic_tabbing() -> None:
     """Disable macOS automatic window tabbing at the class level.
 
     Must be called once before any windows are created.  Without this,

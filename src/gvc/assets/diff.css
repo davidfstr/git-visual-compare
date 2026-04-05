@@ -6,6 +6,7 @@
    CSS custom properties (light mode defaults)
    --------------------------------------------------------- */
 :root {
+  /* NOTE: Duplicated in diff.css and _window_background_color() */
   --bg:                #ffffff;
   --fg:                #24292e;
   --border:            #e1e4e8;
@@ -41,6 +42,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    /* NOTE: Duplicated in diff.css and _window_background_color() */
     --bg:                #0d1117;
     --fg:                #c9d1d9;
     --border:            #30363d;

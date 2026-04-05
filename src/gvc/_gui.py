@@ -26,7 +26,6 @@ if TYPE_CHECKING:
 def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
     """Parse diff bytes and open a new diff window. Thread-safe."""
     from gvc.diff_parser import LargeDiffInfo, parse
-    from gvc.prefs import Prefs
     from gvc.renderer import render
     from gvc.window_manager import create_window
 
@@ -37,7 +36,7 @@ def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
         else render(parse(diff_bytes))
     )
 
-    create_window(html_doc, title, Prefs.load(), api)
+    create_window(html_doc, title, api)
 
 
 def _socket_listener(server_sock: socket.socket, api: AppApi) -> None:

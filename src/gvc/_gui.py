@@ -25,17 +25,16 @@ if TYPE_CHECKING:
 
 def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
     """Parse diff bytes and open a new diff window. Thread-safe."""
-    from gvc.diff_parser import is_large, large_sentinel, parse
+    from gvc.diff_parser import LargeDiffInfo, parse
     from gvc.prefs import Prefs
     from gvc.renderer import render
     from gvc.window_manager import create_window
 
     prefs = Prefs.load()
 
-    large = is_large(diff_bytes)
-    if large:
-        s = large_sentinel(diff_bytes)[0]
-        html_doc = render([], large=True, raw_size=s.raw_size, raw_lines=s.raw_lines)
+    ld_info = LargeDiffInfo.try_parse(diff_bytes)
+    if ld_info is not None:
+        html_doc = render([], large_diff_info=ld_info)
     else:
         html_doc = render(parse(diff_bytes))
 

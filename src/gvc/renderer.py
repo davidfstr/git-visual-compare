@@ -7,7 +7,7 @@ import importlib.resources
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from gvc.diff_parser import FileDiff
+    from gvc.diff_parser import FileDiff, LargeDiffInfo
 
 # ---------------------------------------------------------------------------
 # Asset loading
@@ -184,11 +184,11 @@ def _render_outline(file_diffs: list["FileDiff"]) -> str:
 # Large diff gate
 # ---------------------------------------------------------------------------
 
-def _render_large_gate(raw_size: int, raw_lines: int) -> str:
-    size_mb = raw_size / 1_048_576
+def _render_large_gate(large_diff_info: LargeDiffInfo) -> str:
+    size_mb = large_diff_info.byte_count / 1_048_576
     return (
         f'<div id="large-diff-gate">'
-        f'This is a large diff ({size_mb:.1f} MB, ~{raw_lines:,} lines). '
+        f'This is a large diff ({size_mb:.1f} MB, ~{large_diff_info.line_count:,} lines). '
         f'<a href="#" onclick="revealFullDiff(); return false;">Click here to load.</a>'
         f'</div>'
     )
@@ -201,16 +201,14 @@ def _render_large_gate(raw_size: int, raw_lines: int) -> str:
 def render(
     file_diffs: list["FileDiff"],
     *,
-    large: bool = False,
-    raw_size: int = 0,
-    raw_lines: int = 0,
+    large_diff_info: LargeDiffInfo | None = None,
 ) -> str:
     """Return a complete HTML document string for the given diff."""
     css, js, template = _assets()
 
-    if large:
+    if large_diff_info is not None:
         outline_html = ""
-        diff_html = _render_large_gate(raw_size, raw_lines)
+        diff_html = _render_large_gate(large_diff_info)
     else:
         outline_html = _render_outline(file_diffs)
         diff_parts = [_render_file(fd, i) for i, fd in enumerate(file_diffs)]

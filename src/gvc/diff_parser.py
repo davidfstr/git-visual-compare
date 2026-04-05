@@ -30,13 +30,10 @@ class Hunk:
 
 @dataclass
 class FileDiff:
-    status: Literal["added", "deleted", "modified", "renamed", "binary", "large"]
+    status: Literal["added", "deleted", "modified", "renamed", "binary"]
     old_path: str
     new_path: str
     hunks: list[Hunk] = field(default_factory=list)
-    # For "large" sentinel: raw byte count and line count
-    raw_size: int = 0
-    raw_lines: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -53,27 +50,27 @@ _BINARY = re.compile(r"^Binary files .+ differ$")
 _NO_EOL = r"\ No newline at end of file"
 
 # Large diff thresholds
-LARGE_BYTES = 1_048_576   # 1 MB
-LARGE_LINES = 10_000
+_LARGE_DIFF_BYTE_COUNT = 1_048_576   # 1 MB
+_LARGE_DIFF_LINE_COUNT = 10_000
+
+
+@dataclass(frozen=True)
+class LargeDiffInfo:
+    byte_count: int
+    line_count: int
+
+    @staticmethod
+    def try_parse(diff_bytes: bytes) -> LargeDiffInfo | None:
+        byte_count = len(diff_bytes)
+        line_count = diff_bytes.count(b"\n")
+        if byte_count > _LARGE_DIFF_BYTE_COUNT or line_count > _LARGE_DIFF_LINE_COUNT:
+            return LargeDiffInfo(byte_count=byte_count, line_count=line_count)
+        return None
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
-
-def is_large(raw: bytes) -> bool:
-    return len(raw) > LARGE_BYTES or raw.count(b"\n") > LARGE_LINES
-
-
-def large_sentinel(raw: bytes) -> list[FileDiff]:
-    lines = raw.count(b"\n")
-    return [FileDiff(
-        status="large",
-        old_path="",
-        new_path="",
-        raw_size=len(raw),
-        raw_lines=lines,
-    )]
 
 
 def parse(raw: bytes) -> list[FileDiff]:

@@ -9,7 +9,6 @@ Persistent GUI server process.
   behavior) so the next request opens instantly.
 """
 
-from collections.abc import Callable
 from contextlib import closing
 import datetime as dt
 from pathlib import Path
@@ -22,19 +21,16 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from gvc.app_api import AppApi
-    from gvc.prefs import Prefs
 
 
-type _PrefsLoader = Callable[[], Prefs]
-
-
-def _open_window(title: str, diff_bytes: bytes, api: AppApi, prefs_loader: _PrefsLoader) -> None:
+def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
     """Parse diff bytes and open a new diff window. Thread-safe."""
     from gvc.diff_parser import is_large, large_sentinel, parse
+    from gvc.prefs import Prefs
     from gvc.renderer import render
     from gvc.window_manager import create_window
 
-    prefs = prefs_loader()
+    prefs = Prefs.load()
 
     large = is_large(diff_bytes)
     if large:
@@ -46,7 +42,7 @@ def _open_window(title: str, diff_bytes: bytes, api: AppApi, prefs_loader: _Pref
     create_window(html_doc, title, prefs, api)
 
 
-def _socket_listener(server_sock: socket.socket, api: AppApi, prefs_loader: _PrefsLoader) -> None:
+def _socket_listener(server_sock: socket.socket, api: AppApi) -> None:
     """
     Background thread: accept incoming connections from cli.py.
     Each connection sends a single request file path (UTF-8, no framing needed
@@ -72,7 +68,7 @@ def _socket_listener(server_sock: socket.socket, api: AppApi, prefs_loader: _Pre
             conn.close()
             tmp_path = Path(b"".join(chunks).decode("utf-8").strip())
             req = GuiRequest.read_from(tmp_path)
-            _open_window(req.title, req.diff_bytes, api, prefs_loader)
+            _open_window(req.title, req.diff_bytes, api)
         except Exception:
             # Never crash the listener
             traceback.print_exc()
@@ -124,7 +120,7 @@ def main() -> None:
             # Start socket listener thread
             t = threading.Thread(
                 target=_socket_listener,
-                args=(server_sock, api, Prefs.load),
+                args=(server_sock, api),
                 # Don't keep process alive while still running
                 daemon=True,
             )
@@ -138,7 +134,7 @@ def main() -> None:
             # Open the first window from the request file path in argv
             from gvc._ipc import GuiRequest
             req = GuiRequest.read_from(request_filepath)
-            _open_window(req.title, req.diff_bytes, api, Prefs.load)
+            _open_window(req.title, req.diff_bytes, api)
 
             # Run the Cocoa event loop, until Cmd+Q or webview.stop() called
             webview.start(private_mode=False)

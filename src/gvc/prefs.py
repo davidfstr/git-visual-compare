@@ -1,11 +1,11 @@
 """Persistent user preferences, stored as JSON."""
 
 from dataclasses import asdict, dataclass
-import fcntl
 import json
 import os
 from pathlib import Path
 import platformdirs
+import tempfile
 
 
 _APP_NAME = "gvc"
@@ -44,11 +44,6 @@ class Prefs:
 
     def save(self) -> None:
         path = self._path()
-        tmp = path.with_suffix(".tmp")
-        with tmp.open("w") as fh:
-            fcntl.flock(fh, fcntl.LOCK_EX)
-            try:
-                json.dump(asdict(self), fh, indent=2)
-            finally:
-                fcntl.flock(fh, fcntl.LOCK_UN)
-        os.replace(tmp, path)
+        with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as fh:
+            json.dump(asdict(self), fh, indent=2)
+        os.replace(fh.name, path)

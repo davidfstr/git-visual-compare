@@ -49,7 +49,7 @@ _NO_EOL = r"\ No newline at end of file"
 # Large Diffs
 
 # Large diff thresholds
-_LARGE_DIFF_BYTE_COUNT = 1_048_576   # 1 MB
+_LARGE_DIFF_BYTE_COUNT = 1_000_576   # 1 MB
 _LARGE_DIFF_LINE_COUNT = 10_000
 
 

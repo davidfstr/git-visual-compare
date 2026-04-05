@@ -1,5 +1,6 @@
 """Render a list of FileDiff objects into a self-contained HTML document."""
 
+from functools import cache
 import html
 import importlib.resources
 from typing import assert_never, TYPE_CHECKING
@@ -16,22 +17,11 @@ def _load_asset(name: str) -> str:
     return pkg.read_text(encoding="utf-8")
 
 
-# Cache assets at module level (loaded once per process)
-_CSS: str | None = None
-_JS: str | None = None
-_HTML_TEMPLATE: str | None = None
-
-
+@cache
 def _assets() -> tuple[str, str, str]:
-    global _CSS, _JS, _HTML_TEMPLATE
-    if _CSS is None:
-        _CSS = _load_asset("diff.css")
-        _JS = _load_asset("diff.js")
-        _HTML_TEMPLATE = _load_asset("diff.html")
-    else:
-        assert _CSS is not None
-        assert _JS is not None
-        assert _HTML_TEMPLATE is not None
+    _CSS = _load_asset("diff.css")
+    _JS = _load_asset("diff.js")
+    _HTML_TEMPLATE = _load_asset("diff.html")
     return _CSS, _JS, _HTML_TEMPLATE
 
 
@@ -45,6 +35,7 @@ _STATUS_ICONS = {
     "renamed":  ("🚚", "Renamed"),
     "binary":   ("📄", "Binary"),
 }
+_UNKNOWN_STATUS_ICON = "❓"
 
 
 # ------------------------------------------------------------------------------
@@ -80,22 +71,16 @@ def _lineno(n: int | None) -> str:
 # ------------------------------------------------------------------------------
 # Per-File Rendering
 
-def _render_file(fd: "FileDiff", idx: int) -> str:
-    from gvc.diff_parser import FileDiff  # avoid circular at top level
-
-    icon, label = _STATUS_ICONS.get(fd.status, ("⬜", fd.status.capitalize()))
-
-    if fd.status == "renamed":
-        path_display = _e(f"{fd.old_path} → {fd.new_path}")
-    else:
-        path_display = _e(fd.new_path or fd.old_path)
+def _render_file(fd: FileDiff, idx: int) -> str:
+    status_icon, status_label, file_path = _diff_header(fd)
+    file_path_e = _e(file_path)
 
     parts: list[str] = []
     parts.append(
         f'<details class="file-section" id="file-{idx}" open>'
         f'<summary>'
-        f'<span class="file-status-icon" title="{label}">{icon}</span>'
-        f'<span class="file-path">{path_display}</span>'
+        f'<span class="file-status-icon" title="{status_label}">{status_icon}</span>'
+        f'<span class="file-path">{file_path_e}</span>'
         f'</summary>'
     )
 
@@ -134,7 +119,7 @@ def _render_file(fd: "FileDiff", idx: int) -> str:
                     )
                     continue
                 else:
-                    continue
+                    assert_never(line.kind)
 
                 content_html = _render_content(line.text, line.trailing_ws)
                 parts.append(
@@ -162,23 +147,31 @@ def _render_outline(file_diffs: list["FileDiff"]) -> str:
         '</div>'
     )
     for idx, fd in enumerate(file_diffs):
-        icon, label = _STATUS_ICONS.get(fd.status, ("📄", fd.status.capitalize()))
-        if fd.status == "renamed":
-            name = _e(f"{fd.old_path} → {fd.new_path}")
-        else:
-            name = _e(fd.new_path or fd.old_path)
+        status_icon, status_label, file_path = _diff_header(fd)
+        file_path_e = _e(file_path)
         parts.append(
-            f'<a class="outline-file" href="#file-{idx}" title="{label}: {name}">'
-            f'<span class="outline-status">{icon}</span>{name}</a>'
+            f'<a class="outline-file" href="#file-{idx}" title="{status_label}: {file_path_e}">'
+            f'<span class="outline-status">{status_icon}</span>{file_path_e}</a>'
         )
     return "\n".join(parts)
+
+
+def _diff_header(fd: FileDiff) -> tuple[str, str, str]:
+    status_icon, status_label = _STATUS_ICONS.get(
+        fd.status,
+        (_UNKNOWN_STATUS_ICON, fd.status.capitalize()))
+    if fd.status == "renamed":
+        file_path = f"{fd.old_path} → {fd.new_path}"
+    else:
+        file_path = fd.new_path or fd.old_path
+    return status_icon, status_label, file_path
 
 
 # ------------------------------------------------------------------------------
 # Large Diff Gate
 
-def _render_large_gate(large_diff_info: LargeDiffInfo) -> str:
-    size_mb = large_diff_info.byte_count / 1_048_576
+def _render_large_diff_gate(large_diff_info: LargeDiffInfo) -> str:
+    size_mb = large_diff_info.byte_count / 1_000_000
     return (
         f'<div id="large-diff-gate">'
         f'This is a large diff ({size_mb:.1f} MB, ~{large_diff_info.line_count:,} lines). '
@@ -196,11 +189,11 @@ def render(
     """Return a complete HTML document string for the given diff."""
     from gvc.diff_parser import LargeDiffInfo
     
-    css, js, template = _assets()
+    css, js, html_template = _assets()
 
     if isinstance(file_diffs, LargeDiffInfo):
         outline_html = ""
-        diff_html = _render_large_gate(file_diffs)
+        diff_html = _render_large_diff_gate(file_diffs)
     elif isinstance(file_diffs, list):
         outline_html = _render_outline(file_diffs)
         diff_parts = [_render_file(fd, i) for i, fd in enumerate(file_diffs)]
@@ -210,12 +203,11 @@ def render(
     else:
         assert_never(file_diffs)
 
-    doc = template
+    doc = html_template
     doc = doc.replace("/* INLINE_CSS */", css)
     doc = doc.replace("/* INLINE_JS */", js)
     doc = doc.replace("<!-- OUTLINE_HTML -->", outline_html)
     doc = doc.replace("<!-- DIFF_HTML -->", diff_html)
-
     return doc
 
 

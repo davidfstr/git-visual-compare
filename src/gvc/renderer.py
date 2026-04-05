@@ -7,9 +7,9 @@ from typing import assert_never, TYPE_CHECKING
 if TYPE_CHECKING:
     from gvc.diff_parser import FileDiff, LargeDiffInfo
 
-# ---------------------------------------------------------------------------
-# Asset loading
-# ---------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# Utility: Asset Loading
 
 def _load_asset(name: str) -> str:
     pkg = importlib.resources.files("gvc") / "assets" / name
@@ -35,9 +35,8 @@ def _assets() -> tuple[str, str, str]:
     return _CSS, _JS, _HTML_TEMPLATE
 
 
-# ---------------------------------------------------------------------------
-# Status icons
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# Status Icons
 
 _STATUS_ICONS = {
     "added":    ("➕", "Added"),
@@ -48,9 +47,8 @@ _STATUS_ICONS = {
 }
 
 
-# ---------------------------------------------------------------------------
-# HTML helpers
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# Utility: HTML
 
 def _e(text: str) -> str:
     """HTML-escape a string."""
@@ -79,9 +77,8 @@ def _lineno(n: int | None) -> str:
     return str(n) if n is not None else ""
 
 
-# ---------------------------------------------------------------------------
-# Per-file rendering
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# Per-File Rendering
 
 def _render_file(fd: "FileDiff", idx: int) -> str:
     from gvc.diff_parser import FileDiff  # avoid circular at top level
@@ -153,9 +150,8 @@ def _render_file(fd: "FileDiff", idx: int) -> str:
     return "".join(parts)
 
 
-# ---------------------------------------------------------------------------
-# Outline rendering
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# Outline Rendering
 
 def _render_outline(file_diffs: list["FileDiff"]) -> str:
     parts: list[str] = []
@@ -178,9 +174,8 @@ def _render_outline(file_diffs: list["FileDiff"]) -> str:
     return "\n".join(parts)
 
 
-# ---------------------------------------------------------------------------
-# Large diff gate
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# Large Diff Gate
 
 def _render_large_gate(large_diff_info: LargeDiffInfo) -> str:
     size_mb = large_diff_info.byte_count / 1_048_576
@@ -192,9 +187,8 @@ def _render_large_gate(large_diff_info: LargeDiffInfo) -> str:
     )
 
 
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Public API
-# ---------------------------------------------------------------------------
 
 def render(
     file_diffs: list[FileDiff] | LargeDiffInfo,
@@ -223,3 +217,6 @@ def render(
     doc = doc.replace("<!-- DIFF_HTML -->", diff_html)
 
     return doc
+
+
+# ------------------------------------------------------------------------------

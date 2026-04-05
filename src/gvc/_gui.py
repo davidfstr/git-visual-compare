@@ -32,9 +32,9 @@ def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
 
     prefs = Prefs.load()
 
-    ld_info = LargeDiffInfo.try_parse(diff_bytes)
-    if ld_info is not None:
-        html_doc = render([], large_diff_info=ld_info)
+    large_diff_info = LargeDiffInfo.try_parse(diff_bytes)
+    if large_diff_info is not None:
+        html_doc = render(large_diff_info)
     else:
         html_doc = render(parse(diff_bytes))
 

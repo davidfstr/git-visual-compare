@@ -1,10 +1,8 @@
 """Render a list of FileDiff objects into a self-contained HTML document."""
 
-from __future__ import annotations
-
 import html
 import importlib.resources
-from typing import TYPE_CHECKING
+from typing import assert_never, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from gvc.diff_parser import FileDiff, LargeDiffInfo
@@ -199,22 +197,24 @@ def _render_large_gate(large_diff_info: LargeDiffInfo) -> str:
 # ---------------------------------------------------------------------------
 
 def render(
-    file_diffs: list["FileDiff"],
-    *,
-    large_diff_info: LargeDiffInfo | None = None,
+    file_diffs: list[FileDiff] | LargeDiffInfo,
 ) -> str:
     """Return a complete HTML document string for the given diff."""
+    from gvc.diff_parser import LargeDiffInfo
+    
     css, js, template = _assets()
 
-    if large_diff_info is not None:
+    if isinstance(file_diffs, LargeDiffInfo):
         outline_html = ""
-        diff_html = _render_large_gate(large_diff_info)
-    else:
+        diff_html = _render_large_gate(file_diffs)
+    elif isinstance(file_diffs, list):
         outline_html = _render_outline(file_diffs)
         diff_parts = [_render_file(fd, i) for i, fd in enumerate(file_diffs)]
         diff_html = "\n".join(diff_parts) if diff_parts else (
             '<p style="padding:24px;color:var(--hunk-fg)">No changes.</p>'
         )
+    else:
+        assert_never(file_diffs)
 
     doc = template
     doc = doc.replace("/* INLINE_CSS */", css)

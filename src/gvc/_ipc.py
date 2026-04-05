@@ -50,7 +50,7 @@ def gui_socket_path() -> Path:
 
 def try_send(sock_path: Path, request_filepath: Path) -> bool:
     """
-    Try to connect to the GUI server and send the temp file path.
+    Try to connect to the GUI server and send the request file path.
     Returns True on success, False if no server is listening.
     
     Removes a stale socket file on ConnectionRefusedError.
@@ -71,3 +71,10 @@ def try_send(sock_path: Path, request_filepath: Path) -> bool:
     except Exception:
         traceback.print_exc()
         return False
+
+
+def receive(conn: socket.socket) -> Path:
+    chunks: list[bytes] = []
+    while chunk := conn.recv(4096):
+        chunks.append(chunk)
+    return Path(b"".join(chunks).decode("utf-8").strip())

@@ -46,7 +46,7 @@ def _socket_listener(server_sock: socket.socket, api: AppApi) -> None:
     Each connection sends a single request file path (UTF-8, no framing needed
     since the connection is closed after sending).
     """
-    from gvc._ipc import GuiRequest
+    from gvc._ipc import GuiRequest, receive
 
     server_sock.settimeout(1.0)
 
@@ -60,12 +60,9 @@ def _socket_listener(server_sock: socket.socket, api: AppApi) -> None:
             break
 
         try:
-            chunks: list[bytes] = []
-            while chunk := conn.recv(4096):
-                chunks.append(chunk)
-            conn.close()
-            tmp_path = Path(b"".join(chunks).decode("utf-8").strip())
-            req = GuiRequest.read_from(tmp_path)
+            with closing(conn):
+                request_filepath = receive(conn)
+            req = GuiRequest.read_from(request_filepath)
             _open_window(req.title, req.diff_bytes, api)
         except Exception:
             # Never crash the listener
@@ -119,7 +116,7 @@ def main() -> None:
             t = threading.Thread(
                 target=_socket_listener,
                 args=(server_sock, api),
-                # Don't keep process alive while still running
+                # Thread does not keep process alive
                 daemon=True,
             )
             t.start()

@@ -8,7 +8,6 @@ from typing import Literal
 # ------------------------------------------------------------------------------
 # Data Model
 
-# TODO: Rename "noeol" -> "no_eol"
 LineKind = Literal["context", "added", "removed", "noeol"]
 
 

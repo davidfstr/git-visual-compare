@@ -15,6 +15,9 @@ class AppApi:
     One instance is shared across all windows in a process.
     Methods are called on a background thread by pywebview.
     """
+    
+    _MIN_FONT_SIZE = 8
+    _MAX_FONT_SIZE = 32
 
     def __init__(self, prefs: "Prefs") -> None:
         self._prefs = prefs
@@ -51,7 +54,7 @@ class AppApi:
 
     def set_font_size(self, size: int) -> None:
         """Persist new font size and broadcast to all open windows."""
-        size = max(8, min(32, int(size)))
+        size = max(self._MIN_FONT_SIZE, min(self._MAX_FONT_SIZE, int(size)))
         self._prefs.font_size = size
         self._prefs.save()
 

@@ -1,15 +1,15 @@
 """Parse unified diff output from ``git diff`` into structured data."""
 
-from __future__ import annotations
-
-import re
 from dataclasses import dataclass, field
+import re
 from typing import Literal
 
-# ---------------------------------------------------------------------------
-# Data model
-# ---------------------------------------------------------------------------
 
+# ------------------------------------------------------------------------------
+# Data Model
+
+# TODO: Rename "hunk" -> "hunk_header"
+# TODO: Rename "noeol" -> "no_eol"
 LineKind = Literal["context", "added", "removed", "hunk", "noeol"]
 
 
@@ -18,13 +18,13 @@ class LineDiff:
     kind: LineKind
     old_lineno: int | None  # None for added lines and hunk headers
     new_lineno: int | None  # None for removed lines and hunk headers
-    text: str               # raw content, leading +/-/space stripped for content lines
+    text: str  # raw content, leading +/-/space stripped for content lines
     trailing_ws: bool = False  # True only for added lines with trailing whitespace
 
 
 @dataclass
 class Hunk:
-    header: str             # raw "@@ -l,s +l,s @@ ..." line
+    header: str  # raw "@@ -l,s +l,s @@ ..." line
     lines: list[LineDiff] = field(default_factory=list)
 
 
@@ -36,18 +36,19 @@ class FileDiff:
     hunks: list[Hunk] = field(default_factory=list)
 
 
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Constants
-# ---------------------------------------------------------------------------
 
 _DIFF_HEADER = re.compile(r"^diff --git a/(.+) b/(.+)$")
 _RENAME_FROM = re.compile(r"^rename from (.+)$")
 _RENAME_TO = re.compile(r"^rename to (.+)$")
-_OLD_FILE = re.compile(r"^--- (?:a/)?(.+)$")
-_NEW_FILE = re.compile(r"^\+\+\+ (?:b/)?(.+)$")
 _HUNK_HEADER = re.compile(r"^(@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@.*)$")
 _BINARY = re.compile(r"^Binary files .+ differ$")
 _NO_EOL = r"\ No newline at end of file"
+
+
+# ------------------------------------------------------------------------------
+# Large Diffs
 
 # Large diff thresholds
 _LARGE_DIFF_BYTE_COUNT = 1_048_576   # 1 MB
@@ -68,10 +69,8 @@ class LargeDiffInfo:
         return None
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
-
+# ------------------------------------------------------------------------------
+# Parse Diff
 
 def parse(diff_bytes: bytes) -> list[FileDiff]:
     """Parse unified diff bytes into a list of FileDiff objects."""
@@ -204,3 +203,6 @@ def parse(diff_bytes: bytes) -> list[FileDiff]:
         i += 1
 
     return file_diffs
+
+
+# ------------------------------------------------------------------------------

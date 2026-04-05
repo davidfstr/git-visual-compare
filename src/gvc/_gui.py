@@ -30,15 +30,14 @@ def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
     from gvc.renderer import render
     from gvc.window_manager import create_window
 
-    prefs = Prefs.load()
-
     large_diff_info = LargeDiffInfo.try_parse(diff_bytes)
-    if large_diff_info is not None:
-        html_doc = render(large_diff_info)
-    else:
-        html_doc = render(parse(diff_bytes))
+    html_doc = (
+        render(large_diff_info)
+        if large_diff_info is not None
+        else render(parse(diff_bytes))
+    )
 
-    create_window(html_doc, title, prefs, api)
+    create_window(html_doc, title, Prefs.load(), api)
 
 
 def _socket_listener(server_sock: socket.socket, api: AppApi) -> None:

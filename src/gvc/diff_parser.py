@@ -73,9 +73,9 @@ class LargeDiffInfo:
 # ---------------------------------------------------------------------------
 
 
-def parse(raw: bytes) -> list[FileDiff]:
+def parse(diff_bytes: bytes) -> list[FileDiff]:
     """Parse unified diff bytes into a list of FileDiff objects."""
-    text = raw.decode("utf-8", errors="replace")
+    text = diff_bytes.decode("utf-8", errors="replace")
     lines = text.splitlines()
 
     file_diffs: list[FileDiff] = []

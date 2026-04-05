@@ -8,9 +8,8 @@ from typing import Literal
 # ------------------------------------------------------------------------------
 # Data Model
 
-# TODO: Rename "hunk" -> "hunk_header"
 # TODO: Rename "noeol" -> "no_eol"
-LineKind = Literal["context", "added", "removed", "hunk", "noeol"]
+LineKind = Literal["context", "added", "removed", "noeol"]
 
 
 @dataclass

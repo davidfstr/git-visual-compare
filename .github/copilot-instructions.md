@@ -2,16 +2,13 @@
 
 ## Code Style
 
-- Python ≥ 3.14 required. Use modern syntax (type unions with `|`, etc.)
-- Strings use double quotes (`"`) rather than single quotes (`'`)
-- Always include `from __future__ import annotations` at the top of modules
-    - NOTE: Will eliminate soon, because Python 3.14+ always uses deferred annotations, which supercede this future's effect
+- Python ≥ 3.14 required. Use modern syntax (type unions with `|`, etc.). All type annotations deferred automatically.
 - Use `TYPE_CHECKING` blocks for imports needed only by type checkers
 - Full type annotations on all function signatures
+- Strings use double quotes (`"`) rather than single quotes (`'`)
 - Use `@dataclass` for structural data types
 - Private modules: `_name.py`; private functions: `_name()`; constants: `SCREAMING_SNAKE_CASE`
-- Imports ordered: stdlib → third-party → local
-    - NOTE: Will transition in the future to just alphabetical, without separating imports by category
+- Imports ordered alphabetically
 
 ## Architecture
 

@@ -1,12 +1,8 @@
-/* =========================================================
-   gvc — Git Visual Compare  |  diff.js
-   ========================================================= */
-
 "use strict";
 
 // -------------------------------------------------------
 // State
-// -------------------------------------------------------
+
 const find = {
   query: "",
   caseInsensitive: true,
@@ -17,8 +13,9 @@ const find = {
 };
 
 // -------------------------------------------------------
-// Initialisation (wait for pywebview bridge)
-// -------------------------------------------------------
+// Init
+
+// Wait for pywebview bridge
 window.addEventListener("pywebviewready", async () => {
   try {
     const prefs = await window.pywebview.api.get_prefs();
@@ -28,22 +25,22 @@ window.addEventListener("pywebviewready", async () => {
   }
 });
 
-// Fallback: also run init on DOMContentLoaded in case we're in a plain browser
+// Wait for DOM
 document.addEventListener("DOMContentLoaded", () => {
   setupKeyboard();
   setupFindBar();
 });
 
 // -------------------------------------------------------
-// Font size
-// -------------------------------------------------------
+// Font Size
+
 function applyFontSize(size) {
   document.documentElement.style.setProperty("--font-size", size + "px");
 }
 
 // -------------------------------------------------------
-// Keyboard shortcuts
-// -------------------------------------------------------
+// Keyboard Shortcuts
+
 function setupKeyboard() {
   document.addEventListener("keydown", (e) => {
     const cmd = e.metaKey || e.ctrlKey;
@@ -92,8 +89,8 @@ function setupKeyboard() {
 }
 
 // -------------------------------------------------------
-// Font size change
-// -------------------------------------------------------
+// Font Size Change
+
 async function changeFontSize(delta) {
   const current = parseFloat(
     getComputedStyle(document.documentElement).getPropertyValue("--font-size")
@@ -106,8 +103,8 @@ async function changeFontSize(delta) {
 }
 
 // -------------------------------------------------------
-// Collapse / Expand all
-// -------------------------------------------------------
+// Collapse / Expand All
+
 function setAllSections(open) {
   document.querySelectorAll("details.file-section").forEach((d) => {
     d.open = open;
@@ -115,8 +112,8 @@ function setAllSections(open) {
 }
 
 // -------------------------------------------------------
-// Find bar
-// -------------------------------------------------------
+// Find Bar
+
 function setupFindBar() {
   const bar = document.getElementById("find-bar");
   const input = document.getElementById("find-input");
@@ -185,8 +182,8 @@ function closeFindBar() {
 }
 
 // -------------------------------------------------------
-// Find implementation
-// -------------------------------------------------------
+// Find Implementation
+
 function buildRegex(query) {
   if (!query) return null;
   try {
@@ -323,8 +320,8 @@ function findStep(direction, suppressWrapFlash = false) {
 }
 
 // -------------------------------------------------------
-// Wrap-around flash overlay
-// -------------------------------------------------------
+// Wrap-Around Flash Overlay
+
 let _wrapTimer = null;
 
 function flashWrapOverlay() {
@@ -346,8 +343,8 @@ function flashWrapOverlay() {
 }
 
 // -------------------------------------------------------
-// Large diff gate
-// -------------------------------------------------------
+// Large Diff Gate
+
 function revealFullDiff() {
   const gate = document.getElementById("large-diff-gate");
   const full = document.getElementById("full-diff-hidden");
@@ -359,3 +356,5 @@ function revealFullDiff() {
   // full is a <template> element
   content.appendChild(full.content.cloneNode(true));
 }
+
+// -------------------------------------------------------

@@ -1,35 +1,41 @@
-"""Python API class exposed to JavaScript via the pywebview bridge."""
-
+# NOTE: pywebview eagerly evaluates annotations of AppApi, which will fail
+#       when a typechecking-only import is used, logging "unsupported callable"
+#       to stderr
 from __future__ import annotations
 
 import threading
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from gvc.prefs import Prefs, PrefsDict
     import webview
-    from gvc.prefs import Prefs
 
 
 class AppApi:
     """
-    One instance is shared across all windows in a process.
-    Methods are called on a background thread by pywebview.
+    Singleton which manages global app state, shared across all windows
+    in a process.
+    
+    JavaScript API methods are called on a background thread by pywebview.
     """
     
     _MIN_FONT_SIZE = 8
     _MAX_FONT_SIZE = 32
 
-    def __init__(self, prefs: "Prefs") -> None:
+    def __init__(self, prefs: Prefs) -> None:
         self._prefs = prefs
-        self._windows: list["webview.Window"] = []
+        # NOTE: All accesses must hold self._lock
+        self._windows: list[webview.Window] = []
         self._lock = threading.Lock()
+    
+    # === Windows ===
 
-    def register_window(self, window: "webview.Window") -> None:
+    def register_window(self, window: webview.Window) -> None:
         """Called from window_manager after creating each window."""
         with self._lock:
             self._windows.append(window)
 
-    def unregister_window(self, window: "webview.Window") -> None:
+    def unregister_window(self, window: webview.Window) -> None:
         """Called when a window closes."""
         with self._lock:
             try:
@@ -37,20 +43,16 @@ class AppApi:
             except ValueError:
                 pass
 
-    def open_windows(self) -> "list[webview.Window]":
+    def open_windows(self) -> list[webview.Window]:
         """Return a snapshot of currently open diff windows."""
         with self._lock:
-            return list(self._windows)
+            return list(self._windows)  # clone
 
-    # ------------------------------------------------------------------
-    # API methods callable from JavaScript
-    # ------------------------------------------------------------------
-
-    def get_prefs(self) -> dict:
+    # === JavaScript API ===
+    
+    def get_prefs(self) -> PrefsDict:
         """Return preferences dict to JS on page load."""
-        return {
-            "font_size": self._prefs.font_size,
-        }
+        return self._prefs.to_dict()
 
     def set_font_size(self, size: int) -> None:
         """Persist new font size and broadcast to all open windows."""
@@ -59,8 +61,5 @@ class AppApi:
         self._prefs.save()
 
         js = f"applyFontSize({size});"
-        with self._lock:
-            windows = list(self._windows)
-        for w in windows:
+        for w in self.open_windows():
             w.evaluate_js(js)
-

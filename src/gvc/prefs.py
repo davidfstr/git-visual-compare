@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import platformdirs
 import tempfile
+from typing import TypedDict
 
 
 _APP_NAME = "gvc"
@@ -47,3 +48,12 @@ class Prefs:
         with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as fh:
             json.dump(asdict(self), fh, indent=2)
         os.replace(fh.name, path)
+    
+    def to_dict(self) -> PrefsDict:
+        return PrefsDict({
+            "font_size": self.font_size,
+        })
+
+
+class PrefsDict(TypedDict):
+    font_size: int

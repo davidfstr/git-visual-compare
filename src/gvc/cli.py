@@ -10,15 +10,6 @@ import subprocess
 import sys
 
 
-def _build_title(args: list[str]) -> str:
-    if not args:
-        return "gvc: working tree"
-    label = " ".join(args)
-    if len(label) > 80:
-        label = label[:77] + "..."
-    return f"gvc: {label}"
-
-
 def main() -> None:
     args = sys.argv[1:]
 
@@ -54,6 +45,15 @@ def main() -> None:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+
+
+def _build_title(args: list[str]) -> str:
+    if not args:
+        return "gvc: working tree"
+    label = " ".join(args)
+    if len(label) > 80:
+        label = label[:77] + "..."
+    return f"gvc: {label}"
 
 
 if __name__ == "__main__":

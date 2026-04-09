@@ -23,51 +23,6 @@ if TYPE_CHECKING:
     from gvc.app_api import AppApi
 
 
-def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
-    """Parse diff bytes and open a new diff window. Thread-safe."""
-    from gvc.diff_parser import LargeDiffInfo, parse
-    from gvc.renderer import render
-    from gvc.window_manager import create_window
-
-    large_diff_info = LargeDiffInfo.try_parse(diff_bytes)
-    html_doc = (
-        render(large_diff_info)
-        if large_diff_info is not None
-        else render(parse(diff_bytes))
-    )
-
-    create_window(html_doc, title, api)
-
-
-def _socket_listener(server_sock: socket.socket, api: AppApi) -> None:
-    """
-    Background thread: accept incoming connections from cli.py.
-    Each connection sends a single request file path (UTF-8, no framing needed
-    since the connection is closed after sending).
-    """
-    from gvc._ipc import GuiRequest, receive
-
-    server_sock.settimeout(1.0)
-
-    while True:
-        try:
-            conn, _ = server_sock.accept()
-        except socket.timeout:
-            continue
-        except OSError:
-            # Socket closed. Server shutting down.
-            break
-
-        try:
-            with closing(conn):
-                request_filepath = receive(conn)
-            req = GuiRequest.read_from(request_filepath)
-            _open_window(req.title, req.diff_bytes, api)
-        except Exception:
-            # Never crash the listener
-            traceback.print_exc()
-
-
 def main() -> None:
     if len(sys.argv) < 2:
         sys.exit("usage: python -m gvc._gui <tmpfile>")
@@ -81,10 +36,8 @@ def main() -> None:
     sys.stderr = log_filepath.open("w", buffering=1)
     print(f"gvc started {dt.datetime.now().isoformat(timespec='seconds')}", file=sys.stderr, flush=True)
 
-    # ------------------------------------------------------------------
     # Bind the socket FIRST — before importing webview — so that a second
     # concurrent CLI invocation can find the socket as soon as possible.
-    # ------------------------------------------------------------------
     from gvc._ipc import gui_socket_path
     sock_path = gui_socket_path()
     with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as server_sock:
@@ -95,9 +48,7 @@ def main() -> None:
         try:
             server_sock.listen(5)  # maximum backlog of 5 pending connections
 
-            # ------------------------------------------------------------------
-            # Now load the heavier GUI dependencies
-            # ------------------------------------------------------------------
+            # Load heavier GUI dependencies
             import webview  # noqa: PLC0415
 
             from gvc.app_api import AppApi
@@ -134,6 +85,51 @@ def main() -> None:
             webview.start(private_mode=False)
         finally:
             sock_path.unlink(missing_ok=True)
+
+
+def _socket_listener(server_sock: socket.socket, api: AppApi) -> None:
+    """
+    Background thread: accept incoming connections from cli.py.
+    Each connection sends a single request file path (UTF-8, no framing needed
+    since the connection is closed after sending).
+    """
+    from gvc._ipc import GuiRequest, receive
+
+    server_sock.settimeout(1.0)
+
+    while True:
+        try:
+            conn, _ = server_sock.accept()
+        except socket.timeout:
+            continue
+        except OSError:
+            # Socket closed. Server shutting down.
+            break
+
+        try:
+            with closing(conn):
+                request_filepath = receive(conn)
+            req = GuiRequest.read_from(request_filepath)
+            _open_window(req.title, req.diff_bytes, api)
+        except Exception:
+            # Never crash the listener
+            traceback.print_exc()
+
+
+def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
+    """Parse diff bytes and open a new diff window. Thread-safe."""
+    from gvc.diff_parser import LargeDiffInfo, parse
+    from gvc.renderer import render
+    from gvc.window_manager import create_window
+
+    large_diff_info = LargeDiffInfo.try_parse(diff_bytes)
+    html_doc = (
+        render(large_diff_info)
+        if large_diff_info is not None
+        else render(parse(diff_bytes))
+    )
+
+    create_window(html_doc, title, api)
 
 
 if __name__ == "__main__":

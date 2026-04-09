@@ -10,23 +10,86 @@ if TYPE_CHECKING:
 
 
 # ------------------------------------------------------------------------------
-# Utility: Asset Loading
+# Public API
 
-def _load_asset(name: str) -> str:
-    pkg = importlib.resources.files("gvc") / "assets" / name
-    return pkg.read_text(encoding="utf-8")
+def render(
+    file_diffs: list[FileDiff] | LargeDiffInfo,
+) -> str:
+    """Return a complete HTML document string for the given diff."""
+    from gvc.diff_parser import LargeDiffInfo
+    
+    css, js, html_template = _assets()
 
+    if isinstance(file_diffs, LargeDiffInfo):
+        outline_html = ""
+        diff_html = _render_large_diff_gate(file_diffs)
+    elif isinstance(file_diffs, list):
+        outline_html = _render_outline(file_diffs)
+        diff_parts = [_render_file(fd, i) for i, fd in enumerate(file_diffs)]
+        diff_html = "\n".join(diff_parts) if diff_parts else (
+            '<p style="padding:24px;color:var(--hunk-fg)">No changes.</p>'
+        )
+    else:
+        assert_never(file_diffs)
 
-@cache
-def _assets() -> tuple[str, str, str]:
-    _CSS = _load_asset("diff.css")
-    _JS = _load_asset("diff.js")
-    _HTML_TEMPLATE = _load_asset("diff.html")
-    return _CSS, _JS, _HTML_TEMPLATE
+    doc = html_template
+    doc = doc.replace("/* INLINE_CSS */", css)
+    doc = doc.replace("/* INLINE_JS */", js)
+    doc = doc.replace("<!-- OUTLINE_HTML -->", outline_html)
+    doc = doc.replace("<!-- DIFF_HTML -->", diff_html)
+    return doc
+
 
 
 # ------------------------------------------------------------------------------
-# Status Icons
+# Large Diff Gate
+
+def _render_large_diff_gate(large_diff_info: LargeDiffInfo) -> str:
+    size_mb = large_diff_info.byte_count / 1_000_000
+    return (
+        f'<div id="large-diff-gate">'
+        f'This is a large diff ({size_mb:.1f} MB, ~{large_diff_info.line_count:,} lines). '
+        f'<a href="#" onclick="revealFullDiff(); return false;">Click here to load.</a>'
+        f'</div>'
+    )
+
+
+
+# ------------------------------------------------------------------------------
+# Outline Rendering
+
+def _render_outline(file_diffs: list["FileDiff"]) -> str:
+    parts: list[str] = []
+    parts.append(
+        '<div id="outline-controls">'
+        '<button class="outline-ctrl-btn" onclick="setAllSections(true)">Expand all</button>'
+        '<button class="outline-ctrl-btn" onclick="setAllSections(false)">Collapse all</button>'
+        '</div>'
+    )
+    for idx, fd in enumerate(file_diffs):
+        status_icon, status_label, file_path = _diff_header(fd)
+        file_path_e = _e(file_path)
+        parts.append(
+            f'<a class="outline-file" href="#file-{idx}" title="{status_label}: {file_path_e}">'
+            f'<span class="outline-status">{status_icon}</span>{file_path_e}</a>'
+        )
+    return "\n".join(parts)
+
+
+def _diff_header(fd: FileDiff) -> tuple[str, str, str]:
+    status_icon, status_label = _STATUS_ICONS.get(
+        fd.status,
+        (_UNKNOWN_STATUS_ICON, fd.status.capitalize()))
+    if fd.status == "renamed":
+        file_path = f"{fd.old_path} → {fd.new_path}"
+    else:
+        file_path = fd.new_path or fd.old_path
+    return status_icon, status_label, file_path
+
+
+
+# ------------------------------------------------------------------------------
+# Per-File Rendering
 
 _STATUS_ICONS = {
     "added":    ("➕", "Added"),
@@ -37,39 +100,6 @@ _STATUS_ICONS = {
 }
 _UNKNOWN_STATUS_ICON = "❓"
 
-
-# ------------------------------------------------------------------------------
-# Utility: HTML
-
-def _e(text: str) -> str:
-    """HTML-escape a string."""
-    return html.escape(text, quote=False)
-
-
-def _expand_tabs(text: str, tabsize: int = 4) -> str:
-    """Expand tabs to spaces (4-column per macOS convention)."""
-    return text.expandtabs(tabsize)
-
-
-def _render_content(text: str, trailing_ws: bool) -> str:
-    """
-    Return HTML for a content cell: escape, expand tabs, optionally
-    wrap trailing whitespace in a highlight span.
-    """
-    expanded = _expand_tabs(text)
-    if trailing_ws:
-        stripped = expanded.rstrip(" ")
-        ws = expanded[len(stripped):]
-        return _e(stripped) + f'<span class="trailing-ws">{_e(ws)}</span>'
-    return _e(expanded)
-
-
-def _lineno(n: int | None) -> str:
-    return str(n) if n is not None else ""
-
-
-# ------------------------------------------------------------------------------
-# Per-File Rendering
 
 def _render_file(fd: FileDiff, idx: int) -> str:
     status_icon, status_label, file_path = _diff_header(fd)
@@ -135,80 +165,51 @@ def _render_file(fd: FileDiff, idx: int) -> str:
     return "".join(parts)
 
 
+
 # ------------------------------------------------------------------------------
-# Outline Rendering
+# Utility: Asset Loading
 
-def _render_outline(file_diffs: list["FileDiff"]) -> str:
-    parts: list[str] = []
-    parts.append(
-        '<div id="outline-controls">'
-        '<button class="outline-ctrl-btn" onclick="setAllSections(true)">Expand all</button>'
-        '<button class="outline-ctrl-btn" onclick="setAllSections(false)">Collapse all</button>'
-        '</div>'
-    )
-    for idx, fd in enumerate(file_diffs):
-        status_icon, status_label, file_path = _diff_header(fd)
-        file_path_e = _e(file_path)
-        parts.append(
-            f'<a class="outline-file" href="#file-{idx}" title="{status_label}: {file_path_e}">'
-            f'<span class="outline-status">{status_icon}</span>{file_path_e}</a>'
-        )
-    return "\n".join(parts)
+@cache
+def _assets() -> tuple[str, str, str]:
+    _CSS = _load_asset("diff.css")
+    _JS = _load_asset("diff.js")
+    _HTML_TEMPLATE = _load_asset("diff.html")
+    return _CSS, _JS, _HTML_TEMPLATE
 
 
-def _diff_header(fd: FileDiff) -> tuple[str, str, str]:
-    status_icon, status_label = _STATUS_ICONS.get(
-        fd.status,
-        (_UNKNOWN_STATUS_ICON, fd.status.capitalize()))
-    if fd.status == "renamed":
-        file_path = f"{fd.old_path} → {fd.new_path}"
-    else:
-        file_path = fd.new_path or fd.old_path
-    return status_icon, status_label, file_path
+def _load_asset(name: str) -> str:
+    pkg = importlib.resources.files("gvc") / "assets" / name
+    return pkg.read_text(encoding="utf-8")
 
 
 # ------------------------------------------------------------------------------
-# Large Diff Gate
+# Utility: HTML
 
-def _render_large_diff_gate(large_diff_info: LargeDiffInfo) -> str:
-    size_mb = large_diff_info.byte_count / 1_000_000
-    return (
-        f'<div id="large-diff-gate">'
-        f'This is a large diff ({size_mb:.1f} MB, ~{large_diff_info.line_count:,} lines). '
-        f'<a href="#" onclick="revealFullDiff(); return false;">Click here to load.</a>'
-        f'</div>'
-    )
+def _e(text: str) -> str:
+    """HTML-escape a string."""
+    return html.escape(text, quote=False)
 
 
-# ------------------------------------------------------------------------------
-# Public API
+def _lineno(n: int | None) -> str:
+    return str(n) if n is not None else ""
 
-def render(
-    file_diffs: list[FileDiff] | LargeDiffInfo,
-) -> str:
-    """Return a complete HTML document string for the given diff."""
-    from gvc.diff_parser import LargeDiffInfo
-    
-    css, js, html_template = _assets()
 
-    if isinstance(file_diffs, LargeDiffInfo):
-        outline_html = ""
-        diff_html = _render_large_diff_gate(file_diffs)
-    elif isinstance(file_diffs, list):
-        outline_html = _render_outline(file_diffs)
-        diff_parts = [_render_file(fd, i) for i, fd in enumerate(file_diffs)]
-        diff_html = "\n".join(diff_parts) if diff_parts else (
-            '<p style="padding:24px;color:var(--hunk-fg)">No changes.</p>'
-        )
-    else:
-        assert_never(file_diffs)
+def _render_content(text: str, trailing_ws: bool) -> str:
+    """
+    Return HTML for a content cell: escape, expand tabs, optionally
+    wrap trailing whitespace in a highlight span.
+    """
+    expanded = _expand_tabs(text)
+    if trailing_ws:
+        stripped = expanded.rstrip(" ")
+        ws = expanded[len(stripped):]
+        return _e(stripped) + f'<span class="trailing-ws">{_e(ws)}</span>'
+    return _e(expanded)
 
-    doc = html_template
-    doc = doc.replace("/* INLINE_CSS */", css)
-    doc = doc.replace("/* INLINE_JS */", js)
-    doc = doc.replace("<!-- OUTLINE_HTML -->", outline_html)
-    doc = doc.replace("<!-- DIFF_HTML -->", diff_html)
-    return doc
+
+def _expand_tabs(text: str, tabsize: int = 4) -> str:
+    """Expand tabs to spaces (4-column per macOS convention)."""
+    return text.expandtabs(tabsize)
 
 
 # ------------------------------------------------------------------------------

@@ -19,46 +19,6 @@ _STACK_X = 30
 _STACK_Y = 30
 
 
-def _is_dark_mode() -> bool:
-    """
-    Return True if the OS is currently in Dark Mode.
-    
-    Safe to call before webview.start() initializes the Cocoa application.
-    """
-    from Foundation import NSUserDefaults
-    # NOTE: Uses NSUserDefaults rather than NSApp.effectiveAppearance() because this
-    #       is called before webview.start() initializes the Cocoa application, at
-    #       which point NSApp is still None.
-    defaults = NSUserDefaults.standardUserDefaults()
-    result = defaults.stringForKey_("AppleInterfaceStyle") == "Dark"
-    assert isinstance(result, bool)
-    return result
-
-
-def _get_screen_frame() -> tuple[int, int, int, int]:
-    """
-    Return (x, y, width, height) of the main screen's visible frame
-    (i.e. excluding the macOS menu bar and Dock).
-
-    Safe to call before webview.start()  the Cocoa application.
-    """
-    # NOTE: Uses AppKit directly so that works before webview.start() is called.
-    #       Falls back to a safe 1440×900 assumption if AppKit is unavailable.
-    import AppKit
-    screen = AppKit.NSScreen.mainScreen()
-    if screen:
-        vf = screen.visibleFrame()
-        sf = screen.frame()
-        screen_h = int(sf.size.height)
-        x = int(vf.origin.x)
-        # Convert from bottom-left Cocoa origin to top-left pywebview origin
-        y = screen_h - int(vf.origin.y) - int(vf.size.height)
-        w = int(vf.size.width)
-        h = int(vf.size.height)
-        return x, y, w, h
-    return 0, 0, 1440, 900
-
-
 def disable_automatic_tabbing() -> None:
     """Disable macOS automatic window tabbing at the class level.
 
@@ -129,6 +89,30 @@ def create_window(
     return window
 
 
+def _get_screen_frame() -> tuple[int, int, int, int]:
+    """
+    Return (x, y, width, height) of the main screen's visible frame
+    (i.e. excluding the macOS menu bar and Dock).
+
+    Safe to call before webview.start()  the Cocoa application.
+    """
+    # NOTE: Uses AppKit directly so that works before webview.start() is called.
+    #       Falls back to a safe 1440×900 assumption if AppKit is unavailable.
+    import AppKit
+    screen = AppKit.NSScreen.mainScreen()
+    if screen:
+        vf = screen.visibleFrame()
+        sf = screen.frame()
+        screen_h = int(sf.size.height)
+        x = int(vf.origin.x)
+        # Convert from bottom-left Cocoa origin to top-left pywebview origin
+        y = screen_h - int(vf.origin.y) - int(vf.size.height)
+        w = int(vf.size.width)
+        h = int(vf.size.height)
+        return x, y, w, h
+    return 0, 0, 1440, 900
+
+
 def _window_background_color() -> str:
     # Match the WebView's initial background to the OS appearance so there
     # is no white flash during the window-open animation in dark mode.
@@ -137,3 +121,21 @@ def _window_background_color() -> str:
         (_bg_dark := "#0d1117") if _is_dark_mode()
         else (_bg_light := "#ffffff")
     )
+
+
+def _is_dark_mode() -> bool:
+    """
+    Return True if the OS is currently in Dark Mode.
+    
+    Safe to call before webview.start() initializes the Cocoa application.
+    """
+    from Foundation import NSUserDefaults
+    # NOTE: Uses NSUserDefaults rather than NSApp.effectiveAppearance() because this
+    #       is called before webview.start() initializes the Cocoa application, at
+    #       which point NSApp is still None.
+    defaults = NSUserDefaults.standardUserDefaults()
+    result = defaults.stringForKey_("AppleInterfaceStyle") == "Dark"
+    assert isinstance(result, bool)
+    return result
+
+

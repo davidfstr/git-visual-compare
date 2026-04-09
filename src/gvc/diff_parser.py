@@ -6,36 +6,7 @@ from typing import Literal
 
 
 # ------------------------------------------------------------------------------
-# Data Model
-
-LineKind = Literal["context", "added", "removed", "noeol"]
-
-
-@dataclass
-class LineDiff:
-    kind: LineKind
-    old_lineno: int | None  # None for added lines and hunk headers
-    new_lineno: int | None  # None for removed lines and hunk headers
-    text: str  # raw content, leading +/-/space stripped for content lines
-    trailing_ws: bool = False  # True only for added lines with trailing whitespace
-
-
-@dataclass
-class Hunk:
-    header: str  # raw "@@ -l,s +l,s @@ ..." line
-    lines: list[LineDiff] = field(default_factory=list)
-
-
-@dataclass
-class FileDiff:
-    status: Literal["added", "deleted", "modified", "renamed", "binary"]
-    old_path: str
-    new_path: str
-    hunks: list[Hunk] = field(default_factory=list)
-
-
-# ------------------------------------------------------------------------------
-# Constants
+# Parse Diff
 
 _DIFF_HEADER = re.compile(r"^diff --git a/(.+) b/(.+)$")
 _RENAME_FROM = re.compile(r"^rename from (.+)$")
@@ -44,31 +15,6 @@ _HUNK_HEADER = re.compile(r"^(@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@.*)$")
 _BINARY = re.compile(r"^Binary files .+ differ$")
 _NO_EOL = r"\ No newline at end of file"
 
-
-# ------------------------------------------------------------------------------
-# Large Diffs
-
-# Large diff thresholds
-_LARGE_DIFF_BYTE_COUNT = 1_000_576   # 1 MB
-_LARGE_DIFF_LINE_COUNT = 10_000
-
-
-@dataclass(frozen=True)
-class LargeDiffInfo:
-    byte_count: int
-    line_count: int
-
-    @staticmethod
-    def try_parse(diff_bytes: bytes) -> LargeDiffInfo | None:
-        byte_count = len(diff_bytes)
-        line_count = diff_bytes.count(b"\n")
-        if byte_count > _LARGE_DIFF_BYTE_COUNT or line_count > _LARGE_DIFF_LINE_COUNT:
-            return LargeDiffInfo(byte_count=byte_count, line_count=line_count)
-        return None
-
-
-# ------------------------------------------------------------------------------
-# Parse Diff
 
 def parse(diff_bytes: bytes) -> list[FileDiff]:
     """Parse unified diff bytes into a list of FileDiff objects."""
@@ -201,6 +147,54 @@ def parse(diff_bytes: bytes) -> list[FileDiff]:
         i += 1
 
     return file_diffs
+
+
+LineKind = Literal["context", "added", "removed", "noeol"]
+
+
+@dataclass
+class LineDiff:
+    kind: LineKind
+    old_lineno: int | None  # None for added lines and hunk headers
+    new_lineno: int | None  # None for removed lines and hunk headers
+    text: str  # raw content, leading +/-/space stripped for content lines
+    trailing_ws: bool = False  # True only for added lines with trailing whitespace
+
+
+@dataclass
+class Hunk:
+    header: str  # raw "@@ -l,s +l,s @@ ..." line
+    lines: list[LineDiff] = field(default_factory=list)
+
+
+@dataclass
+class FileDiff:
+    status: Literal["added", "deleted", "modified", "renamed", "binary"]
+    old_path: str
+    new_path: str
+    hunks: list[Hunk] = field(default_factory=list)
+
+
+# ------------------------------------------------------------------------------
+# Large Diffs
+
+# Large diff thresholds
+_LARGE_DIFF_BYTE_COUNT = 1_000_576   # 1 MB
+_LARGE_DIFF_LINE_COUNT = 10_000
+
+
+@dataclass(frozen=True)
+class LargeDiffInfo:
+    byte_count: int
+    line_count: int
+
+    @staticmethod
+    def try_parse(diff_bytes: bytes) -> LargeDiffInfo | None:
+        byte_count = len(diff_bytes)
+        line_count = diff_bytes.count(b"\n")
+        if byte_count > _LARGE_DIFF_BYTE_COUNT or line_count > _LARGE_DIFF_LINE_COUNT:
+            return LargeDiffInfo(byte_count=byte_count, line_count=line_count)
+        return None
 
 
 # ------------------------------------------------------------------------------

@@ -23,7 +23,7 @@ def main() -> None:
         sys.stderr.buffer.write(result.stderr)
         sys.exit(result.returncode)
 
-    from gvc._ipc import GuiRequest, gui_socket_path, try_send
+    from gvc.ipc import GuiRequest, gui_socket_path, try_send
 
     req = GuiRequest(
         title=_build_title(args),
@@ -40,7 +40,7 @@ def main() -> None:
     else:
         # No GUI server running. Launch one, with the initial request.
         subprocess.Popen(
-            [sys.executable, "-m", "gvc._gui", str(request_filepath)],
+            [sys.executable, "-m", "gvc.gui", str(request_filepath)],
             start_new_session=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

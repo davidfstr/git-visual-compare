@@ -7,7 +7,7 @@
 - Full type annotations on all function signatures
 - Strings use double quotes (`"`) rather than single quotes (`'`)
 - Use `@dataclass` for structural data types
-- Private modules: `_name.py`; private functions: `_name()`; constants: `SCREAMING_SNAKE_CASE`
+- Private functions: `_name()`; constants: `SCREAMING_SNAKE_CASE`
 - Imports ordered alphabetically
 
 ## Architecture
@@ -15,15 +15,15 @@
 Process-based GUI with Unix socket IPC. Two processes collaborate:
 
 1. **CLI process** (`cli.py`): runs `git diff`, writes result to temp file, sends path via socket, exits immediately
-2. **GUI server** (`_gui.py`): persistent Cocoa event loop, listens on Unix socket, opens pywebview windows
+2. **GUI server** (`gui.py`): persistent Cocoa event loop, listens on Unix socket, opens pywebview windows
 
 Key module boundaries — see [doc/module_map.txt](../doc/module_map.txt) for the full map:
 
 | Module | Responsibility |
 |--------|---------------|
 | `cli.py` | Entry point, git invocation, IPC client |
-| `_gui.py` | Server lifecycle, Cocoa event loop, socket listener |
-| `_ipc.py` | Stateless IPC helpers (socket path, temp file I/O) |
+| `gui.py` | Server lifecycle, Cocoa event loop, socket listener |
+| `ipc.py` | Stateless IPC helpers (socket path, temp file I/O) |
 | `diff_parser.py` | Unified diff bytes → `list[FileDiff]` |
 | `renderer.py` | Parsed diffs → self-contained HTML (CSS+JS inlined) |
 | `window_manager.py` | pywebview window creation, cascading, dark mode |

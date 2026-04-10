@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 def main() -> None:
     if len(sys.argv) < 2:
-        sys.exit("usage: python -m gvc._gui <tmpfile>")
+        sys.exit("usage: python -m gvc.gui <tmpfile>")
     request_filepath = Path(sys.argv[1])
     
     # Redirect stderr to a persistent log file so tracebacks are observable.
@@ -38,7 +38,7 @@ def main() -> None:
 
     # Bind the socket FIRST — before importing webview — so that a second
     # concurrent CLI invocation can find the socket as soon as possible.
-    from gvc._ipc import gui_socket_path
+    from gvc.ipc import gui_socket_path
     sock_path = gui_socket_path()
     with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as server_sock:
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -77,7 +77,7 @@ def main() -> None:
             webview.create_window("gvc", html="", hidden=True)
 
             # Open the first window from the request file path in argv
-            from gvc._ipc import GuiRequest
+            from gvc.ipc import GuiRequest
             req = GuiRequest.read_from(request_filepath)
             _open_window(req.title, req.diff_bytes, api)
 
@@ -93,7 +93,7 @@ def _socket_listener(server_sock: socket.socket, api: AppApi) -> None:
     Each connection sends a single request file path (UTF-8, no framing needed
     since the connection is closed after sending).
     """
-    from gvc._ipc import GuiRequest, receive
+    from gvc.ipc import GuiRequest, receive
 
     server_sock.settimeout(1.0)
 

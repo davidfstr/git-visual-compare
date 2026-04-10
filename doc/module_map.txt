@@ -14,15 +14,15 @@ Here's a complete picture of the system:
 ┌─────────────────────────────────────────────────────────┐
 │  cli.py  — entry point                                  │
 │  • Runs git diff, captures stdout as raw bytes          │
-│  • Writes temp file via _ipc.write_tmp_file()           │
+│  • Writes temp file via ipc.write_tmp_file()            │
 │  • Tries Unix socket → if server alive, sends path      │
-│  • If no server: Popen(_gui.py, start_new_session=True) │
+│  • If no server: Popen(gui.py, start_new_session=True)  │
 │  • Returns immediately either way                       │
 └──────────┬──────────────────────┬───────────────────────┘
            │ (first run)          │ (subsequent runs)
            ▼ launch               ▼ try_send(sock_path, tmp_path)
 ┌──────────────────────────────────────────────────────────────┐
-│  _gui.py  — persistent GUI server (one process, one Dock icon)│
+│  gui.py   — persistent GUI server (one process, one Dock icon)│
 │                                                              │
 │  startup:                                                    │
 │    1. Bind Unix socket (before importing webview)            │
@@ -40,7 +40,7 @@ Here's a complete picture of the system:
            │ calls
            ▼
 ┌─────────────────────────────────────────────────────────┐
-│  _ipc.py  — shared IPC helpers                          │
+│  ipc.py   — shared IPC helpers                          │
 │  • gui_socket_path() → platformdirs runtime dir / gui.sock│
 │  • write_tmp_file(raw, title) → JSON header + diff bytes │
 │  • read_tmp_file(path) → (raw, title), deletes file      │
@@ -70,8 +70,8 @@ Here's a complete picture of the system:
 | Module | Role |
 |---|---|
 | `cli.py` | Entry point. Runs `git diff`, hands off via IPC. Never blocks. |
-| `_gui.py` | Long-lived server process. Binds socket, owns the Cocoa event loop. |
-| `_ipc.py` | Stateless IPC helpers: socket path, temp file read/write, socket send. |
+| `gui.py` | Long-lived server process. Binds socket, owns the Cocoa event loop. |
+| `ipc.py` | Stateless IPC helpers: socket path, temp file read/write, socket send. |
 | `diff_parser.py` | Parses unified diff bytes → `list[FileDiff]` dataclass tree. |
 | `renderer.py` | Converts `list[FileDiff]` → self-contained HTML string. Loads assets once, caches. |
 | `window_manager.py` | Creates pywebview windows. Handles screen geometry, cascading stacking (based on existing open windows), focus. |

@@ -20,7 +20,15 @@ This installs the package and development dependencies (like mypy).
 Run mypy to check for type errors:
 
 ```bash
-venv/bin/mypy
+mypy
 ```
 
 The project uses strict mypy settings (`disallow_untyped_defs`, `disallow_incomplete_defs`, etc.) to ensure comprehensive type coverage. All function signatures must have complete type annotations.
+
+### Linting
+
+Run isort to sort imports:
+
+```bash
+isort src
+```

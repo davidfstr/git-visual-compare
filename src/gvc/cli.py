@@ -23,7 +23,7 @@ def main() -> None:
         sys.stderr.buffer.write(result.stderr)
         sys.exit(result.returncode)
 
-    from gvc.ipc import GuiRequest, gui_socket_path, try_send
+    from gvc.ipc import gui_socket_path, GuiRequest, try_send
 
     req = GuiRequest(
         title=_build_title(args),

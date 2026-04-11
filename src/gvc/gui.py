@@ -19,6 +19,7 @@ import threading
 import traceback
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from gvc.app_api import AppApi
 
@@ -49,7 +50,7 @@ def main() -> None:
             server_sock.listen(5)  # maximum backlog of 5 pending connections
 
             # Load heavier GUI dependencies
-            import webview  # noqa: PLC0415
+            import webview  # isort:skip
 
             from gvc.app_api import AppApi
             from gvc.prefs import Prefs

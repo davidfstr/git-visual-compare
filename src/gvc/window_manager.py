@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING
 import webview
 
+
 if TYPE_CHECKING:
     from gvc.app_api import AppApi
 
@@ -130,6 +131,7 @@ def _is_dark_mode() -> bool:
     Safe to call before webview.start() initializes the Cocoa application.
     """
     from Foundation import NSUserDefaults
+
     # NOTE: Uses NSUserDefaults rather than NSApp.effectiveAppearance() because this
     #       is called before webview.start() initializes the Cocoa application, at
     #       which point NSApp is still None.

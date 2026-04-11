@@ -6,6 +6,7 @@ from __future__ import annotations
 import threading
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from gvc.prefs import Prefs, PrefsDict
     import webview

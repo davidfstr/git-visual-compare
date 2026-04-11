@@ -5,6 +5,7 @@ import html
 import importlib.resources
 from typing import assert_never, TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from gvc.diff_parser import FileDiff, LargeDiffInfo
 

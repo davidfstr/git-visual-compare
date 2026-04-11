@@ -1,5 +1,6 @@
 """Shared IPC helpers: socket path and temp-file protocol."""
 
+from contextlib import closing
 from dataclasses import dataclass
 import json
 from pathlib import Path
@@ -56,11 +57,10 @@ def try_send(sock_path: Path, request_filepath: Path) -> bool:
     Removes a stale socket file on ConnectionRefusedError.
     """
     try:
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.settimeout(2.0)
-        sock.connect(str(sock_path))
-        sock.sendall(str(request_filepath).encode("utf-8"))
-        sock.close()
+        with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as sock:
+            sock.settimeout(2.0)
+            sock.connect(str(sock_path))
+            sock.sendall(str(request_filepath).encode("utf-8"))
         return True
     except FileNotFoundError:
         return False

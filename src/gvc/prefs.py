@@ -37,7 +37,7 @@ class Prefs:
         try:
             with path.open("r") as fh:
                 data = json.load(fh)
-            known_field_names = {f for f in cls.__dataclass_fields__}
+            known_field_names = set(cls.__dataclass_fields__.keys())
             return cls(**{k: v for k, v in data.items() if k in known_field_names})
         except (json.JSONDecodeError, TypeError):
             # Malformed prefs file. Revert to default prefs silently.

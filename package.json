@@ -1,0 +1,11 @@
+{
+    "name": "gvc",
+    "description": "Git Visual Compare — a GUI diff viewer driven from the command line",
+    "private": true,
+    "scripts": {
+        "tsc": "tsc"
+    },
+    "devDependencies": {
+        "typescript": "^5"
+    }
+}

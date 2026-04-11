@@ -1,9 +1,12 @@
 # AI Coding
 /plan/LOCAL/
 
-# Operating System: macOS
-.DS_Store
+# Language: JavaScript
+node_modules/
 
-# Python
+# Language: Python
 *.py[co]
 *venv*
+
+# Operating System: macOS
+.DS_Store

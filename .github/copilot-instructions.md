@@ -36,17 +36,17 @@ Assets (CSS/JS/HTML) live in `src/gvc/assets/` and are inlined into rendered HTM
 
 ```bash
 # Setup
-python -m venv venv && venv/bin/pip install -e .
+poetry install
 
 # Run
-gvc [git-diff-args...]
+poetry run gvc [git-diff-args...]
 ```
 
 No automated test suite yet.
 
 ## Typecheck
 
-Run typechecking with: `venv/bin/mypy`
+Run typechecking with: `poetry run mypy`
 
 This project uses mostly strict settings in `pyproject.toml`:
 - `disallow_untyped_defs = true` — All functions must have type annotations

@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "gvc"
@@ -14,16 +14,14 @@ dependencies = [
     "pyobjc-framework-Cocoa; sys_platform == 'darwin'",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "mypy>=1.0",
-]
-
 [project.scripts]
 gvc = "gvc.cli:main"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/gvc"]
+[tool.poetry]
+packages = [{include = "gvc", from = "src"}]
+
+[tool.poetry.group.dev.dependencies]
+mypy = ">=1.0"
 
 [tool.mypy]
 python_version = "3.14"

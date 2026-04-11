@@ -11,5 +11,5 @@
         "noImplicitAny": true,
         "skipLibCheck": true
     },
-    "include": ["src/gvc/assets/**/*.js"]
+    "include": ["src/gvc/assets/**/*.js", "src/gvc/assets/**/*.d.ts"]
 }

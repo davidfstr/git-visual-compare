@@ -9,7 +9,8 @@ const find = {
     caseInsensitive: true,
     wholeWord: false,
     useRegex: false,
-    marks: [],   // HTMLElement[]
+    /** @type {HTMLElement[]} */
+    marks: [],
     current: -1,
 };
 
@@ -35,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // -------------------------------------------------------
 // Font Size
 
-function applyFontSize(size) {
+function applyFontSize(/** @type {number} */ size) {
     document.documentElement.style.setProperty("--font-size", size + "px");
 }
 
@@ -92,7 +93,7 @@ function setupKeyboard() {
 // -------------------------------------------------------
 // Font Size Change
 
-async function changeFontSize(delta) {
+async function changeFontSize(/** @type {number} */ delta) {
     const current = parseFloat(
         getComputedStyle(document.documentElement).getPropertyValue("--font-size")
     ) || 13;
@@ -106,8 +107,9 @@ async function changeFontSize(delta) {
 // -------------------------------------------------------
 // Collapse / Expand All
 
-function setAllSections(open) {
+function setAllSections(/** @type {boolean} */ open) {
     document.querySelectorAll("details.file-section").forEach((d) => {
+        if (!(d instanceof HTMLDetailsElement)) { throw new Error('Expected <details> element') }
         d.open = open;
     });
 }
@@ -124,8 +126,14 @@ function setupFindBar() {
     const btnPrev = document.getElementById("btn-find-prev");
     const btnNext = document.getElementById("btn-find-next");
     const btnClose = document.getElementById("find-close");
-
-    if (!bar) return;
+    if (!bar) { throw new Error("find-bar not found"); }
+    if (!(input instanceof HTMLInputElement)) { throw new Error("find-input not found or wrong type"); }
+    if (!btnCase) { throw new Error("btn-case not found"); }
+    if (!btnWord) { throw new Error("btn-word not found"); }
+    if (!btnRegex) { throw new Error("btn-regex not found"); }
+    if (!btnPrev) { throw new Error("btn-find-prev not found"); }
+    if (!btnNext) { throw new Error("btn-find-next not found"); }
+    if (!btnClose) { throw new Error("find-close not found"); }
 
     // Input change
     input.addEventListener("input", () => {
@@ -168,7 +176,9 @@ function setupFindBar() {
 function openFindBar() {
     const bar = document.getElementById("find-bar");
     const input = document.getElementById("find-input");
-    if (!bar) return;
+    if (!bar) { throw new Error("find-bar not found"); }
+    if (!(input instanceof HTMLInputElement)) { throw new Error("find-input not found or wrong type"); }
+    
     bar.classList.remove("hidden");
     input.focus();
     input.select();
@@ -176,7 +186,8 @@ function openFindBar() {
 
 function closeFindBar() {
     const bar = document.getElementById("find-bar");
-    if (!bar) return;
+    if (!bar) { throw new Error("find-bar not found"); }
+    
     bar.classList.add("hidden");
     clearMarks();
     find.current = -1;
@@ -185,7 +196,7 @@ function closeFindBar() {
 // -------------------------------------------------------
 // Find Implementation
 
-function buildRegex(query) {
+function buildRegex(/** @type {string} */ query) {
     if (!query) return null;
     try {
         let pattern = find.useRegex ? query : escapeRegex(query);
@@ -197,7 +208,7 @@ function buildRegex(query) {
     }
 }
 
-function escapeRegex(s) {
+function escapeRegex(/** @type {string} */ s) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
@@ -207,6 +218,8 @@ function runFind() {
     find.current = -1;
 
     const input = document.getElementById("find-input");
+    if (!(input instanceof HTMLInputElement)) { throw new Error("find-input not found or wrong type"); }
+    
     if (!find.query) {
         input.classList.remove("no-match");
         return;
@@ -266,6 +279,7 @@ function runFind() {
             frag.appendChild(document.createTextNode(text.slice(lastIndex)));
         }
 
+        if (!textNode.parentNode) { throw new Error("textNode has no parent"); }
         textNode.parentNode.replaceChild(frag, textNode);
     }
 
@@ -291,7 +305,7 @@ function clearMarks() {
     if (container) container.normalize();
 }
 
-function findStep(direction, suppressWrapFlash = false) {
+function findStep(/** @type {number} */ direction, /** @type {boolean} */ suppressWrapFlash = false) {
     if (!find.marks.length) return;
 
     const prev = find.current;
@@ -323,6 +337,7 @@ function findStep(direction, suppressWrapFlash = false) {
 // -------------------------------------------------------
 // Wrap-Around Flash Overlay
 
+/** @type {ReturnType<typeof setTimeout> | null} */
 let _wrapTimer = null;
 
 function flashWrapOverlay() {
@@ -353,8 +368,9 @@ function revealFullDiff() {
 
     // Move the full diff content into view
     const content = document.getElementById("diff-content");
+    if (!content) { throw new Error("diff-content not found"); }
     content.innerHTML = "";
-    // full is a <template> element
+    if (!(full instanceof HTMLTemplateElement)) { throw new Error("full-diff-hidden is not a <template>"); }
     content.appendChild(full.content.cloneNode(true));
 }
 

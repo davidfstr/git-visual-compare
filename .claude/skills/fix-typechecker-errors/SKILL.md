@@ -38,6 +38,25 @@ def create_window(...) -> webview.Window:
     return window
 ```
 
+### 1.2. Handle real failure modes with an explicit check-and-raise
+
+When a function genuinely *can* return `None` (or some other sentinel) on failure, don't use `assert isinstance(...)` to narrow the type — that conflates a real runtime failure with a programmer-error check. `assert` can be stripped with `python -O`, and reading an assertion tells the next reader "this can't happen," which is the wrong message.
+
+**Before reaching for `assert isinstance(...)`, verify the stub is actually wrong.** Read the source of the function if you can. If `None` is a genuine failure mode, handle it explicitly:
+
+```python
+# Before: assert conflates "can't happen" with "handle the failure"
+window = webview.create_window(...)
+assert isinstance(window, webview.Window)  # wrong: None is a real failure mode
+
+# After: explicit check-and-raise preserves the failure semantics
+window = webview.create_window(...)
+if window is None:
+    raise Exception("Failed to create window")
+```
+
+This both narrows the type (mypy sees the guard) and handles the failure honestly. The distinction from section 2 below: use `assert isinstance()` only when the type stub is provably overly permissive and `None`/other values cannot occur in practice.
+
 ### 1.N. (TODO: Add more patterns, each with an example)
 
 ## 2. Runtime Validation with isinstance() (Good)

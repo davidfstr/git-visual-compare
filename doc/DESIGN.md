@@ -2,7 +2,7 @@ Here's a complete picture of the system:
 
 ---
 
-## Module Map
+## Components
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -14,13 +14,13 @@ Here's a complete picture of the system:
 ┌─────────────────────────────────────────────────────────┐
 │  cli.py  — entry point                                  │
 │  • Runs git diff, captures stdout as raw bytes          │
-│  • Writes temp file via ipc.write_tmp_file()            │
+│  • Writes temp file via ipc.GR.write_to_temp_file()     │
 │  • Tries Unix socket → if server alive, sends path      │
 │  • If no server: Popen(gui.py, start_new_session=True)  │
 │  • Returns immediately either way                       │
 └──────────┬──────────────────────┬───────────────────────┘
            │ (first run)          │ (subsequent runs)
-           ▼ launch               ▼ try_send(sock_path, tmp_path)
+           ▼ launch               ▼ try_send(sock_path, request_filepath)
 ┌──────────────────────────────────────────────────────────────┐
 │  gui.py   — persistent GUI server (one process, one Dock icon)│
 │                                                              │
@@ -39,18 +39,19 @@ Here's a complete picture of the system:
 └──────────┬───────────────────────────────────────────────────┘
            │ calls
            ▼
-┌─────────────────────────────────────────────────────────┐
-│  ipc.py   — shared IPC helpers                          │
-│  • gui_socket_path() → platformdirs runtime dir / gui.sock│
-│  • write_tmp_file(raw, title) → JSON header + diff bytes │
-│  • read_tmp_file(path) → (raw, title), deletes file      │
-│  • try_send(sock_path, tmp_path) → bool                  │
-└─────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│  ipc.py   — shared IPC helpers                             │
+│  • GuiRequest.write_to_temp_file() → header + diff bytes   │
+│  • GuiRequest.read_from(filepath)                          │
+|    → GuiRequest, deletes file                              │
+│  • gui_socket_path() → platformdirs runtime dir / gui.sock │
+│  • try_send(sock_path, request_filepath) → bool            │
+└────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
 │  _open_window() flow (called per diff request)                  │
 │                                                                 │
-│  raw bytes                                                      │
+│  diff bytes                                                     │
 │      │                                                          │
 │      ▼ diff_parser.parse()                                      │
 │  list[FileDiff]  ──── diff_parser.is_large() ──► large gate     │

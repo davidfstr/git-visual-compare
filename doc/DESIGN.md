@@ -1,70 +1,56 @@
 Here's a complete picture of the system:
 
----
 
 ## Components
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  User's terminal                                        │
-│  $ gvc HEAD~1 HEAD                                      │
-└────────────────────┬────────────────────────────────────┘
-                     │ subprocess.run("git diff --find-renames ...")
-                     ▼
-┌─────────────────────────────────────────────────────────┐
-│  cli.py  — entry point                                  │
-│  • Runs git diff, captures stdout as raw bytes          │
-│  • Writes temp file via ipc.GR.write_to_temp_file()     │
-│  • Tries Unix socket → if server alive, sends path      │
-│  • If no server: Popen(gui.py, start_new_session=True)  │
-│  • Returns immediately either way                       │
-└──────────┬──────────────────────┬───────────────────────┘
-           │ (first run)          │ (subsequent runs)
-           ▼ launch               ▼ try_send(sock_path, request_filepath)
-┌──────────────────────────────────────────────────────────────┐
-│  gui.py   — persistent GUI server (one process, one Dock icon)│
-│                                                              │
-│  startup:                                                    │
-│    1. Bind Unix socket (before importing webview)            │
-│    2. Import webview, create AppApi, start listener thread   │
-│    3. Create hidden keepalive window (keeps event loop alive) │
-│    4. Open first diff window from argv[1]                    │
-│    5. webview.start() — blocks on Cocoa event loop forever   │
-│                                                              │
-│  socket listener thread:                                     │
-│    • Accepts connections from cli.py                         │
-│    • Reads temp file path, calls _open_window()              │
-│    • _open_window() can be called from any thread;           │
-│      pywebview dispatches create_window() to main thread     │
-└──────────┬───────────────────────────────────────────────────┘
-           │ calls
-           ▼
-┌────────────────────────────────────────────────────────────┐
-│  ipc.py   — shared IPC helpers                             │
-│  • GuiRequest.write_to_temp_file() → header + diff bytes   │
-│  • GuiRequest.read_from(filepath)                          │
-|    → GuiRequest, deletes file                              │
-│  • gui_socket_path() → platformdirs runtime dir / gui.sock │
-│  • try_send(sock_path, request_filepath) → bool            │
-└────────────────────────────────────────────────────────────┘
+![Components diagram](DESIGN/components.png)
 
-┌─────────────────────────────────────────────────────────────────┐
-│  _open_window() flow (called per diff request)                  │
-│                                                                 │
-│  diff bytes                                                     │
-│      │                                                          │
-│      ▼ diff_parser.parse()                                      │
-│  list[FileDiff]  ──── diff_parser.is_large() ──► large gate     │
-│      │                                                          │
-│      ▼ renderer.render()                                        │
-│  HTML string (self-contained, CSS+JS inlined)                   │
-│      │                                                          │
-│      ▼ window_manager.create_window()                           │
-│  webview.Window (pywebview → WKWebView via Cocoa)               │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    User(["User Terminal\ngvc HEAD~1 HEAD"])
+    Git["git"]
+
+    subgraph CLIProc["CLI Process — exits immediately"]
+        cli["cli.py"]
+    end
+
+    ipc["ipc.py\nshared IPC helpers"]
+
+    subgraph GUIProc["GUI Server Process — persistent app"]
+        gui["gui.py"]
+        diff_parser["diff_parser.py"]
+        renderer["renderer.py"]
+        window_manager["window_manager.py"]
+        app_api["app_api.py"]
+        prefs["prefs.py"]
+    end
+
+    assets["assets/\ndiff.html · diff.css · diff.js"]
+    WKWebView["WKWebView\npywebview / Cocoa"]
+
+    User -->|"invokes"| cli
+    cli -->|"subprocess.run()"| Git
+    Git -->|"diff bytes"| cli
+
+    cli -->|"calls GuiRequest.write_to_temp_file(),\ntry_send()"| ipc
+    gui -->|"calls GuiRequest.read_from(),\nreceive()"| ipc
+
+    cli -.->|"Popen() — first run only"| gui
+    cli -->|"sends temp file path\nvia Unix socket"| gui
+
+    gui -->|"parse(diff bytes)"| diff_parser
+    diff_parser -->|"list[FileDiff]"| renderer
+    renderer -->|"reads + inlines"| assets
+    renderer -->|"create_window(html: str)"| window_manager
+    window_manager -->|"create_window()"| WKWebView
+    window_manager -->|"on_closed:\nunregister_window()"| app_api
+    window_manager -->|"register_window()"| app_api
+    
+    gui -->|"creates"| app_api
+    app_api <-->|"JS ↔ Python bridge\nget_prefs / set_font_size"| WKWebView
+    app_api -->|"read / write"| prefs
 ```
 
----
 
 ## Module Responsibilities
 
@@ -82,37 +68,18 @@ Here's a complete picture of the system:
 | `assets/diff.css` | All theming. Light/dark via CSS custom properties + `@media prefers-color-scheme`. |
 | `assets/diff.js` | Find bar, keyboard shortcuts, font size, collapse/expand, wrap-around flash. |
 
----
 
-## Data Flow
-
-```
-git diff bytes
-  → diff_parser.parse()   →  list[FileDiff(status, old_path, new_path, hunks[Hunk(header, lines[LineDiff(kind, ln, text)])])]
-  → renderer.render()     →  complete HTML string (outline nav + <details> file sections + <table> diff rows)
-  → webview.create_window →  WKWebView renders HTML; JS runs; pywebviewready fires → get_prefs() → applyFontSize()
-```
-
-## JS ↔ Python Bridge
-
-```
-JS                                   Python (AppApi)
-──                                   ───────────────
-window.pywebview.api.get_prefs()  →  returns {font_size}
-window.pywebview.api.set_font_size(n) →  saves prefs, broadcasts applyFontSize(n) to all windows
-```
-
----
-
-## Persistence (platformdirs paths on macOS)
+## Persisted Data
 
 | What | Path |
 |---|---|
-| Socket | `~/Library/Application Support/../Caches/TemporaryItems/gvc/gui.sock` (user_runtime_dir) |
-| Prefs | `~/Library/Application Support/gvc/prefs.json` (user_data_dir) — stores `font_size` |
-| Temp diff files | `NSTemporaryDirectory()` (NamedTemporaryFile, deleted after reading) |
+| Prefs | `~/Library/Application Support/gvc/prefs.json` (`user_data_dir`) |
+| Logs | `~/Library/Logs/gvc/gvc.log` (`user_log_dir`) |
+| Socket | `~/Library/Caches/TemporaryItems/gvc/gui.sock` (`user_runtime_dir`) |
+| GUI Request | `/var/folders/vm/A/T/B.gvc` (`NamedTemporaryFile`) |
 
----
+The `platformdirs` module is used to locate many of these paths.
+
 
 ## Notable Design Choices
 

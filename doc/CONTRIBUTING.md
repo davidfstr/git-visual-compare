@@ -40,3 +40,24 @@ Run isort to sort imports:
 ```bash
 isort src
 ```
+
+## Running gvc
+
+Two ways to build and run:
+
+**A. Unbundled (fast iteration, no build step):**
+
+```bash
+poetry run gvc [git-diff-args...]
+```
+
+**B. Bundled `.app` (correct Dock tooltip, Finder icon):**
+
+```bash
+poetry run python build_app.py
+./dist/gvc.app/Contents/MacOS/gvc [git-diff-args...]
+```
+
+Use A for day-to-day work. Use B when you need the Dock tooltip to say "gvc"
+instead of "Python" — macOS reads the tooltip once at launch from a bundle's
+`Info.plist`, which only the `.app` has.

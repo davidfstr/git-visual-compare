@@ -10,3 +10,7 @@ node_modules/
 
 # Operating System: macOS
 .DS_Store
+
+# PyInstaller
+/build/
+/dist/

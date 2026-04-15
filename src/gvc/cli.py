@@ -6,12 +6,21 @@ Entry point:
 - Hand offs diff data to the persistent GUI server process
 """
 
+from pathlib import Path
 import subprocess
 import sys
 
 
 def main() -> None:
     args = sys.argv[1:]
+    
+    # If invoked as `--gui-server <request_file>` by another gvc process,
+    # act as the persistent GUI server instead of as the CLI.
+    if args and args[0] == "--gui-server":
+        from gvc.gui import main as gui_main
+        sys.argv = [sys.argv[0]] + args[1:]
+        gui_main()
+        return
 
     cmd = ["git", "diff", "--find-renames"] + args
     try:
@@ -38,13 +47,28 @@ def main() -> None:
         # Existing GUI server accepted the request
         pass
     else:
-        # No GUI server running. Launch one, with the initial request.
+        # No GUI server running. Launch one:
+        # - If this cli.py itself lives inside a distributed .app bundle, launch it.
+        # - Otherwise fall back to an unbundled `python -m gvc.gui`.
+        bundle_exe = _enclosing_app_executable()
+        if bundle_exe is not None:
+            argv = [str(bundle_exe), "--gui-server", str(request_filepath)]
+        else:
+            argv = [sys.executable, "-m", "gvc.gui", str(request_filepath)]
         subprocess.Popen(
-            [sys.executable, "-m", "gvc.gui", str(request_filepath)],
+            argv,
             start_new_session=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+
+
+def _enclosing_app_executable() -> Path | None:
+    """If cli.py lives inside a .app bundle, return its Contents/MacOS/gvc path."""
+    for parent in Path(__file__).resolve().parents:
+        if parent.suffix == ".app":
+            return parent / "Contents" / "MacOS" / "gvc"
+    return None
 
 
 def _build_title(args: list[str]) -> str:

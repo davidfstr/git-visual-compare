@@ -4,6 +4,21 @@ The first `gvc` invocation launches a persistent background process that owns al
 
 Diffs are rendered as self-contained HTML with inlined CSS and JS; no HTTP server, no network access required.
 
+### Dual-purpose entry point
+
+The `gvc` executable is dual-purpose:
+
+- Normal git-diff args → acts as the CLI (runs `git diff`, hands off via IPC).
+- `--gui-server <request_file>` → acts as the persistent GUI server. Only the
+  CLI itself invokes this form, on first run when no server is yet listening.
+
+When packaged as `dist/gvc.app`, `cli.py` detects it lives inside a `.app`
+(via `__file__`) and spawns the GUI server by re-invoking its own bundled
+executable with `--gui-server`, so LaunchServices picks up the bundle
+identity from `Info.plist`. When unbundled, it falls back to
+`python -m gvc.gui` and patches the app identity (App menu, About panel,
+Dock icon) at runtime from `_configure_app_identity()`.
+
 
 ## Components
 

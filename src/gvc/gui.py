@@ -11,6 +11,7 @@ Persistent GUI server process.
 
 from contextlib import closing
 import datetime as dt
+from importlib.metadata import version
 from pathlib import Path
 import platformdirs
 import socket
@@ -60,6 +61,10 @@ def main() -> None:
             # otherwise every window gets a tab bar that duplicates the title.
             disable_automatic_tabbing()
 
+            # Configure Dock name, About Box contents, and app icon.
+            # NOTE: Must run before webview.start()
+            _configure_app_identity()
+
             # Single shared AppApi for all windows in this process
             api = AppApi(Prefs.load())
 
@@ -86,6 +91,42 @@ def main() -> None:
             webview.start(private_mode=False)
         finally:
             sock_path.unlink(missing_ok=True)
+
+
+def _configure_app_identity() -> None:
+    """
+    Set the Dock icon and About Box contents. Must run before webview.start().
+    
+    NOTE: When gvc is running as unbundled, the Dock tooltip will still
+    show "Python" rather than "gvc" because macOS caches the display name
+    at launch time from the .app bundle's Info.plist, which isn't available
+    when gvc is running as unbundled.
+    """
+    import AppKit
+    from Foundation import NSBundle, NSProcessInfo
+    from importlib.resources import as_file, files
+
+    # Define app name for the App menu
+    NSProcessInfo.processInfo().setProcessName_("gvc")
+
+    # Define app metadata for the About Box
+    # NOTE: Duplicated in gvc.spec and _configure_app_identity()
+    bundle_info = NSBundle.mainBundle().infoDictionary()
+    bundle_info["CFBundleName"] = "gvc"
+    bundle_info["CFBundleDisplayName"] = "gvc"
+    bundle_info["CFBundleShortVersionString"] = version("gvc")
+    bundle_info["CFBundleVersion"] = version("gvc")
+    bundle_info["NSHumanReadableCopyright"] = "Copyright © 2026 David Foster"
+
+    # Define app icon for the Dock icon and About Box
+    icon_resource = files("gvc").joinpath("assets/icon.png")
+    with as_file(icon_resource) as icon_path:
+        image = AppKit.NSImage.alloc().initWithContentsOfFile_(str(icon_path))
+    if image is not None:
+        # Register as the named system image so About panel / NSImage.imageNamed_
+        # lookups return the gvc icon
+        image.setName_("NSApplicationIcon")
+        AppKit.NSApplication.sharedApplication().setApplicationIconImage_(image)
 
 
 def _socket_listener(server_sock: socket.socket, api: AppApi) -> None:

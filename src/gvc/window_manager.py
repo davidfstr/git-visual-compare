@@ -72,6 +72,8 @@ def create_window(
         text_select=True,
         background_color=_window_background_color(),
     )
+    if window is None:
+        raise Exception('Failed to create window')
 
     api.register_window(window)
 

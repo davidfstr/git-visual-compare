@@ -4,3 +4,5 @@ how gvc works and how to extend it.
 Table of Contents:
 * [CONTRIBUTING.md](CONTRIBUTING.md) - Workflows for contributors
 * [DESIGN.md](DESIGN.md) - High-level design of GVC
+* incomplete_features/
+    * [standalone_app.md](incomplete_features/standalone_app.md) - Plan to support building an .app package for distribution

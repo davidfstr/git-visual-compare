@@ -64,6 +64,6 @@ It also uses this loose setting:
 
 ## Documentation
 
-- [doc/how_it_works.md](../doc/how_it_works.md) — architecture walkthrough
+- [doc/DESIGN.md](../doc/DESIGN.md) — architecture walkthrough
 - [plan/requirements.md](../plan/requirements.md) — feature specification, keyboard shortcuts, rendering rules
 - [plan/inception.md](../plan/inception.md) — design rationale and decision log

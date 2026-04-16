@@ -9,6 +9,11 @@ venv/bin/pip install -e ".[dev]"
 
 This installs the package and development dependencies (like mypy).
 
+To install your development copy of gvc globally:
+```
+pipx install -e .
+```
+
 ### Type Checking Python
 
 Run mypy to check for type errors:

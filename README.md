@@ -29,18 +29,11 @@ Most visual diff tools fall into one of two camps: GUI diff apps limited to look
 Requires **Python 3.14+** and a working `git` installation.
 
 ```bash
-# With pipx (recommended: isolated environment)
-pipx install .
+# Install pipx first
+python3 -m pip install pipx
 
-# With pip
-pip install .
-
-# With uv
-uv pip install .
-
-# Development install
-python -m venv venv
-venv/bin/pip install -e .
+# Install gvc
+pipx install gvc
 ```
 
 After installation, `gvc` is available as a command in your shell.

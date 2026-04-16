@@ -1,6 +1,6 @@
 # gvc <small>(Git Visual Compare)</small>
 
-> The ease of a visual diff viewer, the power of command-line diffing tools.
+> The ease of a visual diff viewer, the power of a command-line diffing tool.
 
 <img src="https://github.com/davidfstr/git-visual-compare/blob/main/src/gvc/assets/icon.png?raw=true" alt="gvc logo" align="right" width="200" />
 

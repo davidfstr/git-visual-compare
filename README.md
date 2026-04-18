@@ -6,7 +6,7 @@
 
 **gvc** is a lightweight macOS GUI for viewing `git diff` output. Run `gvc` where you'd normally run `git diff` - it opens a native window displaying a formatted, scrollable, searchable diff. It was built as a modern replacement for [GitX](https://gitx.frim.nl/)'s `--diff` mode, which served gvc's author faithfully for over a decade but lacked dark mode, find, and active maintenance.
 
-![Screenshot of gvc, showing a diff in dark mode](https://github.com/davidfstr/git-visual-compare/blob/main/README/screenshot-dark.png)
+![Screenshot of gvc, showing a diff in dark mode](https://github.com/davidfstr/git-visual-compare/blob/main/README/screenshot-dark.png?raw=true)
 
 ## Why Another Diff Tool?
 
@@ -69,3 +69,4 @@ Each invocation opens a new window. The CLI returns immediately - your terminal 
 ## Release Notes
 
 See [RELEASE_NOTES.md](RELEASE_NOTES.md)
+# 

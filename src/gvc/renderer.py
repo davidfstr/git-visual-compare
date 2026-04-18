@@ -1,13 +1,13 @@
 """Render a list of FileDiff objects into a self-contained HTML document."""
 
 from functools import cache
+from gvc.diff_parser import LargeDiffInfo
 import html
 import importlib.resources
 from typing import assert_never, TYPE_CHECKING
 
-
 if TYPE_CHECKING:
-    from gvc.diff_parser import FileDiff, LargeDiffInfo
+    from gvc.diff_parser import FileDiff
 
 
 # ------------------------------------------------------------------------------
@@ -17,8 +17,6 @@ def render(
     file_diffs: list[FileDiff] | LargeDiffInfo,
 ) -> str:
     """Return a complete HTML document string for the given diff."""
-    from gvc.diff_parser import LargeDiffInfo
-    
     css, js, html_template = _assets()
 
     if isinstance(file_diffs, LargeDiffInfo):

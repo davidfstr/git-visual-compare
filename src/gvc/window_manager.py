@@ -1,8 +1,9 @@
 """Create and manage pywebview windows."""
 
+import AppKit
+from Foundation import NSUserDefaults
 from typing import TYPE_CHECKING
 import webview
-
 
 if TYPE_CHECKING:
     from gvc.app_api import AppApi
@@ -27,7 +28,6 @@ def disable_automatic_tabbing() -> None:
     every NSWindow gets an ``NSTabBar`` accessory view that duplicates
     the window title as a tab label.
     """
-    import AppKit
     AppKit.NSWindow.setAllowsAutomaticWindowTabbing_(False)
 
 
@@ -80,7 +80,6 @@ def create_window(
     def on_shown() -> None:
         # Bring the app to the front so the new window isn't hidden behind
         # other apps. pywebview doesn't do this automatically on macOS.
-        import AppKit
         AppKit.NSApp.activateIgnoringOtherApps_(True)
 
     def on_closed() -> None:
@@ -101,7 +100,6 @@ def _get_screen_frame() -> tuple[int, int, int, int]:
     """
     # NOTE: Uses AppKit directly so that works before webview.start() is called.
     #       Falls back to a safe 1440×900 assumption if AppKit is unavailable.
-    import AppKit
     screen = AppKit.NSScreen.mainScreen()
     if screen:
         vf = screen.visibleFrame()
@@ -129,11 +127,9 @@ def _window_background_color() -> str:
 def _is_dark_mode() -> bool:
     """
     Return True if the OS is currently in Dark Mode.
-    
+
     Safe to call before webview.start() initializes the Cocoa application.
     """
-    from Foundation import NSUserDefaults
-
     # NOTE: Uses NSUserDefaults rather than NSApp.effectiveAppearance() because this
     #       is called before webview.start() initializes the Cocoa application, at
     #       which point NSApp is still None.

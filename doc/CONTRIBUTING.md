@@ -48,7 +48,7 @@ isort src
 
 ## Running gvc
 
-Two ways to build and run:
+Three ways to build and run:
 
 **A. Unbundled (fast iteration, no build step):**
 
@@ -56,13 +56,24 @@ Two ways to build and run:
 poetry run gvc [git-diff-args...]
 ```
 
-**B. Bundled `.app` (correct Dock tooltip, Finder icon):**
+**B. Editable `.app` (fast iteration, build once edit many, correct Dock tooltip):**
+
+```bash
+poetry run python build_app.py -e
+./dist/gvc.app/Contents/MacOS/gvc [git-diff-args...]
+```
+
+**C. Distribution `.app` (standalone):**
 
 ```bash
 poetry run python build_app.py
 ./dist/gvc.app/Contents/MacOS/gvc [git-diff-args...]
 ```
 
-Use A for day-to-day work. Use B when you need the Dock tooltip to say "gvc"
-instead of "Python" — macOS reads the tooltip once at launch from a bundle's
-`Info.plist`, which only the `.app` has.
+Use A or B for day-to-day work. Prefer B over A when you need the `.app`
+context (Dock tooltip says "gvc" instead of "Python", Finder icon, bundled
+Python framework). With B, edits to `*.py`, `*.html`, `*.js`, and `*.css`
+under `src/gvc/` are picked up on the next launch without rebuilding;
+changes to any other files (e.g. `pyproject.toml`, `gvc.spec`, the app
+icon) require rebuilding the `.app` shell. Use C to produce the bundle
+that would ship to end users.

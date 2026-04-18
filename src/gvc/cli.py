@@ -64,8 +64,8 @@ def main() -> None:
 
 
 def _enclosing_app_executable() -> Path | None:
-    """If cli.py lives inside a .app bundle, return its Contents/MacOS/gvc path."""
-    for parent in Path(__file__).resolve().parents:
+    """If running inside an .app bundle, return its Contents/MacOS/gvc path."""
+    for parent in Path(sys.executable).parents:
         if parent.suffix == ".app":
             return parent / "Contents" / "MacOS" / "gvc"
     return None

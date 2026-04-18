@@ -3,6 +3,7 @@
 # Invoke via `poetry run python build_app.py`.
 
 from importlib.metadata import version as _pkg_version
+import os
 
 
 _VERSION = _pkg_version("gvc")
@@ -25,7 +26,7 @@ a = Analysis(
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
-    noarchive=False,
+    noarchive=(os.environ.get("GVC_NOARCHIVE") == "1"),
 )
 pyz = PYZ(a.pure)
 exe = EXE(

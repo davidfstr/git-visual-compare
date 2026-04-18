@@ -14,6 +14,10 @@ dependencies = [
     "pyobjc-framework-Cocoa; sys_platform == 'darwin'",
 ]
 
+[project.urls]
+"Release notes" = "https://github.com/davidfstr/git-visual-compare/blob/main/RELEASE_NOTES.md"
+repository = "https://github.com/davidfstr/git-visual-compare"
+
 [project.scripts]
 gvc = "gvc.cli:main"
 

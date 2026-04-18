@@ -65,3 +65,7 @@ Each invocation opens a new window. The CLI returns immediately - your terminal 
 | Cmd+Minus | Decrease font size |
 | Cmd+W | Close window |
 | Cmd+Q | Quit application |
+
+## Release Notes
+
+See [RELEASE_NOTES.md](RELEASE_NOTES.md)

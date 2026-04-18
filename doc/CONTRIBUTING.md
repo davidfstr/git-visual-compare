@@ -77,3 +77,22 @@ under `src/gvc/` are picked up on the next launch without rebuilding;
 changes to any other files (e.g. `pyproject.toml`, `gvc.spec`, the app
 icon) require rebuilding the `.app` shell. Use C to produce the bundle
 that would ship to end users.
+
+### Installing a development `gvc` on `PATH`
+
+To invoke your working copy as just `gvc` from anywhere:
+
+**For A** — install an editable console script via pipx:
+
+```bash
+pipx install -e .
+```
+
+**For B or C** — symlink the bundle's executable into a directory on `PATH`:
+
+```bash
+ln -s "$(pwd)/dist/gvc.app/Contents/MacOS/gvc" /usr/local/bin/gvc
+```
+
+The symlink survives rebuilds (the executable path inside the `.app` is
+stable), so you only need to create it once.

@@ -2,9 +2,9 @@
 
 from contextlib import closing
 from dataclasses import dataclass
+from gvc import paths
 import json
 from pathlib import Path
-import platformdirs
 import socket
 import tempfile
 import traceback
@@ -44,7 +44,7 @@ def gui_socket_path() -> Path:
     Return the path to the GUI server's Unix domain socket,
     which may or may not exist.
     """
-    d = Path(platformdirs.user_runtime_dir("gvc"))
+    d = paths.user_runtime_dir()
     d.mkdir(parents=True, exist_ok=True)
     return d / "gui.sock"
 

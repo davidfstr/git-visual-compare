@@ -1,18 +1,26 @@
 """Tests that usage of the "gvc" command line utility behaves correctly."""
 
+from harness.app import GvcApp
 import pytest
 
 
 # === Test: Application: Lifecycle ===
 
-@pytest.mark.skip('not yet automated')
-def test_when_gvc_run_in_terminal_given_no_gui_running_then_starts_gui_and_opens_new_diff_window() -> None:
-    pass
+def test_when_gvc_run_in_terminal_given_no_gui_running_then_starts_gui_and_opens_new_diff_window(
+    gvc_app: GvcApp,
+) -> None:
+    gvc_app.run_cli(["HEAD~1", "HEAD"])
+    gvc_app.wait_for_windows(1)
 
 
-@pytest.mark.skip('not yet automated')
-def test_when_gvc_run_in_terminal_given_gui_running_then_opens_new_diff_window_in_existing_gui() -> None:
-    pass
+def test_when_gvc_run_in_terminal_given_gui_running_then_opens_new_diff_window_in_existing_gui(
+    gvc_app: GvcApp,
+) -> None:
+    gvc_app.run_cli(["HEAD~1", "HEAD"])
+    gvc_app.wait_for_windows(1)
+
+    gvc_app.run_cli(["HEAD~2", "HEAD~1"])
+    gvc_app.wait_for_windows(2)
 
 
 @pytest.mark.skip('not yet automated')

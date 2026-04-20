@@ -81,6 +81,25 @@ def _handle_request(conn: socket.socket, api: AppApi) -> None:
                 {"id": w.uid, "title": w.title}
                 for w in api.open_windows()
             ]
+        elif method == "eval_js":
+            window_id = req.get("window_id")
+            src = req.get("src")
+            window = next(
+                (w for w in api.open_windows() if w.uid == window_id),
+                None,
+            )
+            if window is None:
+                result = {"error": f"no window: {window_id!r}"}
+            elif not isinstance(src, str):
+                result = {"error": f"src must be str, got {type(src).__name__}"}
+            else:
+                try:
+                    # pywebview marshals evaluate_js to the Cocoa main thread
+                    # and blocks until the JS returns. The JS itself wraps its
+                    # return value as {ok: ...} or {error: ...}.
+                    result = window.evaluate_js(src)
+                except Exception as e:
+                    result = {"error": f"evaluate_js raised: {e}"}
         else:
             result = {"error": f"unknown method: {method!r}"}
 

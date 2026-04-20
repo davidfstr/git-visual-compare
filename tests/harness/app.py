@@ -1,6 +1,8 @@
 from harness.client import GvcGuiNotDoneStarting, TestClient, WindowInfo
+from harness.playwrightkit import Page
 from harness.sandbox import GvcSandbox
 import os
+from pathlib import Path
 import signal
 import subprocess
 import sys
@@ -20,24 +22,43 @@ class GvcApp:
 
     # === CLI ===
 
-    def run_cli(self, args: list[str] | None = None) -> subprocess.CompletedProcess[bytes]:
+    def run_cli(
+        self,
+        args: list[str] | None = None,
+        cwd: str | Path | None = None,
+    ) -> subprocess.CompletedProcess[bytes]:
         """
         Invokes the gvc CLI and returns immediately.
 
         The CLI exits as soon as it has handed the request to the GUI (either
         by spawning a new GUI process or by sending to an existing one).
+
+        `cwd` sets the working directory for the CLI, which controls the
+        repository `git diff` runs against.
         """
         result = subprocess.run(
             [sys.executable, "-m", "gvc.cli"] + (args or []),
             env=self.sandbox.env,
+            cwd=str(cwd) if cwd is not None else None,
             capture_output=True,
             timeout=3.0,
         )
         if result.returncode != 0:
             raise AssertionError(
                 f'Expected gvc CLI to exit successfully but '
-                f'it returned exit code {result.returncode}')
+                f'it returned exit code {result.returncode}. '
+                f'stderr: {result.stderr.decode("utf-8", errors="replace")!r}')
         return result
+
+    # === DOM Access ===
+
+    def page(self, window_id: str) -> Page:
+        """
+        Returns a Playwright-shaped Page for the given window.
+
+        The window must already exist (use wait_for_windows() first).
+        """
+        return Page(self._client, window_id)
 
     # === Window Inspection ===
 

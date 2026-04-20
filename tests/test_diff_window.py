@@ -1,8 +1,11 @@
 """
-Tests that the appearance of diff windows is correct and that immediately 
+Tests that the appearance of diff windows is correct and that immediately
 visible controls have the expected behavior.
 """
 
+from harness.app import GvcApp
+from harness.diff_fixture import DiffFixture, EXPECTED_FILES
+from harness.playwrightkit import expect
 import pytest
 
 
@@ -65,10 +68,29 @@ def test_when_transition_between_light_and_dark_mode_then_diff_colors_change() -
 # TODO: Readme calls this "table of contents" but code calls this feature "outline".
 #       Pick a term and use it consistently everywhere.
 
-@pytest.mark.skip('not yet automated')
-def test_given_diff_window_visible_then_shows_added_and_deleted_and_modified_and_renamed_and_binary_files_with_correct_icons_and_paths() -> None:
-    # Special case: Rename must show both old and new paths
-    pass
+def test_given_diff_window_visible_then_shows_added_and_deleted_and_modified_and_renamed_and_binary_files_with_correct_icons_and_paths(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    (window,) = gvc_app.wait_for_windows(1)
+    page = gvc_app.page(window.id)
+
+    entries = page.locator("#file-outline .outline-file")
+    expect(entries).to_have_count(len(EXPECTED_FILES))
+
+    # Verify icon-path pairs match the expected set
+    # NOTE: Output order is not defined, so compare expected vs. actual as a set
+    actual: dict[str, str] = {}
+    for i in range(len(EXPECTED_FILES)):
+        entry = entries.nth(i)
+        icon = entry.locator(".outline-status").text_content()
+        text = entry.text_content()
+        assert icon is not None and text is not None
+        assert text.startswith(icon), \
+            f"entry {i} textContent {text!r} does not start with icon {icon!r}"
+        actual[icon] = text.removeprefix(icon)
+    assert actual == EXPECTED_FILES
 
 
 @pytest.mark.skip('not yet automated')
@@ -88,12 +110,29 @@ def test_when_expand_all_button_pressed_then_all_file_sections_expand() -> None:
     pass
 
 
-@pytest.mark.skip('not yet automated')
-def test_when_header_of_file_section_clicked_given_section_expanded_then_section_collapses() -> None:
-    pass
+def test_when_header_of_file_section_clicked_given_section_expanded_then_section_collapses(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    (window,) = gvc_app.wait_for_windows(1)
+    page = gvc_app.page(window.id)
+
+    # File sections render as <details open>; clicking the <summary>
+    # relies on standard HTML behavior to toggle the `open` attribute.
+    section = page.locator("#file-0")
+    expect(section).to_have_attribute("open", "")
+
+    # Collapse
+    section.locator("summary").click()
+    expect(section).not_to_have_attribute("open")
+
+    # Expand
+    section.locator("summary").click()
+    expect(section).to_have_attribute("open", "")
 
 
-@pytest.mark.skip('not yet automated')
+@pytest.mark.skip('covered by: test_when_header_of_file_section_clicked_given_section_expanded_then_section_collapses')
 def test_when_header_of_file_section_clicked_given_section_collapsed_then_section_expands() -> None:
     pass
 

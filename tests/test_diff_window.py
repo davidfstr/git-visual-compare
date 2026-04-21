@@ -3,10 +3,12 @@ Tests that the appearance of diff windows is correct and that immediately
 visible controls have the expected behavior.
 """
 
+from gvc import window_manager
 from harness.app import GvcApp
 from harness.diff_fixture import DiffFixture, EXPECTED_FILES
 from harness.playwrightkit import expect
 import pytest
+from unittest.mock import MagicMock, patch
 
 
 # === Test: Lifecycle ===
@@ -38,14 +40,12 @@ def test_cannot_resize_diff_window_to_be_smaller_than_5_rows_or_10_columns() -> 
 
 # === Test: Light and Dark Mode ===
 
-@pytest.mark.skip('not yet automated')
 def test_given_light_mode_when_diff_window_appears_then_window_background_while_appearing_is_light() -> None:
-    pass
+    _assert_background_color_for_dark_mode(is_dark=False, expected_color="#ffffff")
 
 
-@pytest.mark.skip('not yet automated')
 def test_given_dark_mode_when_diff_window_appears_then_window_background_while_appearing_is_dark() -> None:
-    pass
+    _assert_background_color_for_dark_mode(is_dark=True, expected_color="#0d1117")
 
 
 @pytest.mark.skip('not yet automated')
@@ -61,6 +61,22 @@ def test_given_dark_mode_then_shows_correct_diff_colors() -> None:
 @pytest.mark.skip('not yet automated')
 def test_when_transition_between_light_and_dark_mode_then_diff_colors_change() -> None:
     pass
+
+
+def _assert_background_color_for_dark_mode(*, is_dark: bool, expected_color: str) -> None:
+    mock_window = MagicMock()
+    mock_api = MagicMock()
+    mock_api.open_windows.return_value = []
+
+    with (
+        patch.object(window_manager, "_is_dark_mode", return_value=is_dark),
+        patch.object(window_manager, "_get_screen_frame", return_value=(0, 0, 1440, 900)),
+        patch("webview.create_window", return_value=mock_window) as mock_create,
+    ):
+        window_manager.create_window(html="<html/>", title="Test", api=mock_api)
+
+    _, kwargs = mock_create.call_args
+    assert kwargs["background_color"] == expected_color
 
 
 # === Test: Table of Contents ===

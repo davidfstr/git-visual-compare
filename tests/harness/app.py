@@ -7,6 +7,7 @@ import signal
 import subprocess
 import sys
 import time
+from typing import Literal
 
 
 class GvcApp:
@@ -57,16 +58,6 @@ class GvcApp:
         windows = self.wait_for_windows(old_window_count + 1)
         return windows[-1]
 
-    # === DOM Access ===
-
-    def page(self, window: WindowInfo) -> Page:
-        """
-        Returns a Playwright-shaped Page for the given window.
-
-        The window must already exist (use wait_for_windows() first).
-        """
-        return Page(self._client, window.id)
-
     # === Window Inspection ===
 
     def wait_for_windows(self, count: int, timeout: float = 5.0) -> list[WindowInfo]:
@@ -90,6 +81,26 @@ class GvcApp:
         raise TimeoutError(
             f"Expected {count} window(s); last seen: {last_windows!r}"
         )
+
+    # === DOM Access ===
+
+    def page(self, window: WindowInfo) -> Page:
+        """
+        Returns a Playwright-shaped Page for the given window.
+
+        The window must already exist (use wait_for_windows() first).
+        """
+        return Page(self._client, window.id)
+
+    # === Appearance ===
+
+    def set_appearance(self, window: WindowInfo, appearance: Literal["light", "dark"]) -> None:
+        """
+        Forces the diff window's WKWebView to render in "light" or "dark" mode,
+        making @media (prefers-color-scheme: ...) CSS rules activate
+        independently of the current OS setting.
+        """
+        self._client.set_appearance(window.id, appearance)
 
     # === Close ===
 

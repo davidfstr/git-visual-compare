@@ -4,16 +4,21 @@ Testing mode. Presents a test-only API to control gvc from automated tests.
 Active only when GVC_TEST_MODE is set.
 """
 
+import AppKit
 from collections.abc import Callable
 from contextlib import closing
+from Foundation import NSOperationQueue
 from gvc import paths
 import json
 import os
 from pathlib import Path
 import socket
 import threading
+import time
 import traceback
 from typing import TYPE_CHECKING
+import webview
+from webview.platforms.cocoa import BrowserView
 
 if TYPE_CHECKING:
     from gvc.app_api import AppApi
@@ -100,7 +105,64 @@ def _handle_request(conn: socket.socket, api: AppApi) -> None:
                     result = window.evaluate_js(src)
                 except Exception as e:
                     result = {"error": f"evaluate_js raised: {e}"}
+        elif method == "set_appearance":
+            window_id = req.get("window_id")
+            appearance = req.get("appearance")
+            window = next(
+                (w for w in api.open_windows() if w.uid == window_id),
+                None,
+            )
+            if window is None:
+                result = {"error": f"no window: {window_id!r}"}
+            elif appearance not in ("light", "dark"):
+                result = {"error": f"appearance must be 'light' or 'dark', got {appearance!r}"}
+            else:
+                try:
+                    _set_window_appearance(window, appearance)
+                    result = {"ok": None}
+                except Exception as e:
+                    result = {"error": str(e)}
         else:
             result = {"error": f"unknown method: {method!r}"}
 
         conn.sendall((json.dumps(result) + "\n").encode("utf-8"))
+
+
+def _set_window_appearance(window: webview.Window, appearance: str) -> None:
+    """Forces `window` into light or dark appearance; safe to call from a background thread."""
+    # BrowserView for non-master windows is created via AppHelper.callAfter(),
+    # which fires asynchronously on the Cocoa run loop.  Poll until it appears.
+    deadline = time.monotonic() + 5.0  # capture
+    while True:
+        browser = BrowserView.instances.get(window.uid)
+        if browser is not None:
+            break
+        if time.monotonic() > deadline:
+            keys = list(BrowserView.instances.keys())
+            raise RuntimeError(
+                f"no BrowserView for window uid {window.uid!r} after 5s; "
+                f"BrowserView.instances keys={keys!r}"
+            )
+        time.sleep(0.05)
+
+    appearance_name = (
+        AppKit.NSAppearanceNameDarkAqua
+        if appearance == "dark"
+        else AppKit.NSAppearanceNameAqua
+    )
+
+    done = threading.Event()
+    error: BaseException | None = None
+    def _block() -> None:
+        nonlocal error
+        try:
+            ns_appearance = AppKit.NSAppearance.appearanceNamed_(appearance_name)
+            browser.webview.setAppearance_(ns_appearance)
+        except BaseException as e:
+            error = e
+        finally:
+            done.set()
+    NSOperationQueue.mainQueue().addOperationWithBlock_(_block)
+    done.wait(timeout=5.0)
+    if error is not None:
+        raise error

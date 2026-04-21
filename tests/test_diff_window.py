@@ -6,8 +6,9 @@ visible controls have the expected behavior.
 from gvc import window_manager
 from harness.app import GvcApp
 from harness.diff_fixture import DiffFixture, EXPECTED_FILES
-from harness.playwrightkit import expect
+from harness.playwrightkit import Page, expect
 import pytest
+import time
 from unittest.mock import MagicMock, patch
 
 
@@ -48,14 +49,28 @@ def test_given_dark_mode_when_diff_window_appears_then_window_background_while_a
     _assert_background_color_for_dark_mode(is_dark=True, expected_color="#0d1117")
 
 
-@pytest.mark.skip('not yet automated')
-def test_given_light_mode_then_shows_correct_diff_colors() -> None:
-    pass
+def test_given_light_mode_then_shows_correct_diff_colors(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    gvc_app.set_appearance(window, "light")
+    page = gvc_app.page(window)
+
+    _expect_css_var(page, "--added-bg", "#bbf5cc")
+    _expect_css_var(page, "--removed-bg", "#ffc0c8")
 
 
-@pytest.mark.skip('not yet automated')
-def test_given_dark_mode_then_shows_correct_diff_colors() -> None:
-    pass
+def test_given_dark_mode_then_shows_correct_diff_colors(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    gvc_app.set_appearance(window, "dark")
+    page = gvc_app.page(window)
+
+    _expect_css_var(page, "--added-bg", "#124a28")
+    _expect_css_var(page, "--removed-bg", "#4a1220")
 
 
 @pytest.mark.skip('not yet automated')
@@ -77,6 +92,20 @@ def _assert_background_color_for_dark_mode(*, is_dark: bool, expected_color: str
 
     _, kwargs = mock_create.call_args
     assert kwargs["background_color"] == expected_color
+
+
+def _expect_css_var(page: Page, var: str, expected: str, timeout: float = 5.0) -> None:
+    """Polls until the CSS custom property `var` on :root equals `expected`."""
+    deadline = time.monotonic() + timeout  # capture
+    actual: object = None
+    while time.monotonic() < deadline:
+        actual = page.evaluate(
+            f"() => getComputedStyle(document.documentElement).getPropertyValue('{var}').trim()"
+        )
+        if actual == expected:
+            return
+        time.sleep(0.05)
+    raise AssertionError(f"CSS var {var!r}: expected {expected!r}, got {actual!r}")
 
 
 # === Test: Table of Contents ===

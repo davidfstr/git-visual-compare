@@ -38,6 +38,18 @@ class TestClient:
         assert isinstance(result, list)
         return [WindowInfo(id=w["id"], title=w["title"]) for w in result]
 
+    def set_appearance(self, window_id: str, appearance: str) -> None:
+        """
+        Forces the WKWebView for `window_id` to render in light or dark mode,
+        making @media (prefers-color-scheme: ...) CSS rules activate
+        independently of the OS setting.
+
+        `appearance` must be "light" or "dark".
+        """
+        result = self._call("set_appearance", window_id=window_id, appearance=appearance)
+        if isinstance(result, dict) and "error" in result:
+            raise RuntimeError(str(result["error"]))
+
     def eval_js(self, window_id: str, src: str) -> object:
         """
         Evaluates `src` in the webview of window `window_id`.

@@ -59,6 +59,22 @@ class LocatorAssertions:
             describe=lambda v: f"expected visible, got is_visible={v}",
         )
 
+    def to_be_in_viewport(self, ratio: float | None = None) -> None:
+        """
+        Asserts that the element's bounding rect intersects the viewport.
+
+        With `ratio` omitted or 0, any intersection counts. With `ratio` in
+        (0, 1], at least that fraction of the element's area must lie inside
+        the viewport. Mirrors Playwright's expect(loc).to_be_in_viewport(ratio).
+        """
+        self._retry(
+            predicate=lambda: (
+                self._locator._page._op("inViewport", self._locator._chain, ratio),
+                lambda v: v is True,
+            ),
+            describe=lambda v: f"expected in viewport (ratio={ratio}), got in_viewport={v}",
+        )
+
     def to_have_attribute(self, name: str, value: object = _UNSET) -> None:
         if value is _UNSET:
             self._retry(
@@ -125,6 +141,15 @@ class LocatorAssertions:
         self._retry(
             predicate=lambda: (self._locator.is_visible(), lambda v: v is False),
             describe=lambda v: f"expected not visible, got is_visible={v}",
+        )
+
+    def not_to_be_in_viewport(self, ratio: float | None = None) -> None:
+        self._retry(
+            predicate=lambda: (
+                self._locator._page._op("inViewport", self._locator._chain, ratio),
+                lambda v: v is False,
+            ),
+            describe=lambda v: f"expected not in viewport (ratio={ratio}), got in_viewport={v}",
         )
 
     def not_to_have_attribute(self, name: str, value: object = _UNSET) -> None:

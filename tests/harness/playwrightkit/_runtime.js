@@ -76,6 +76,22 @@
                     }
                     case 'isVisible':
                         return isVisible(resolveOne(chain));
+                    case 'inViewport': {
+                        // arg: ratio (0..1). 0 / null means "any intersection".
+                        var el = resolveOne(chain);
+                        if (el === null) return false;
+                        var rect = el.getBoundingClientRect();
+                        var vw = window.innerWidth;
+                        var vh = window.innerHeight;
+                        var ix = Math.max(0, Math.min(rect.right, vw) - Math.max(rect.left, 0));
+                        var iy = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0));
+                        var intersectionArea = ix * iy;
+                        var ratio = (typeof arg === 'number') ? arg : 0;
+                        if (ratio <= 0) return intersectionArea > 0;
+                        var elArea = rect.width * rect.height;
+                        if (elArea === 0) return false;
+                        return (intersectionArea / elArea) >= ratio;
+                    }
                     case 'computedCss': {
                         var el = resolveOne(chain);
                         if (el === null) return null;
@@ -130,7 +146,9 @@
     }
 
     try {
-        return { ok: window.pwk.op(kind, chain, arg) };
+        // Normalise undefined → null so JSON.stringify doesn't drop the `ok` key
+        var result = window.pwk.op(kind, chain, arg);
+        return { ok: result === undefined ? null : result };
     } catch (e) {
         return { error: (e && e.message) ? e.message : String(e) };
     }

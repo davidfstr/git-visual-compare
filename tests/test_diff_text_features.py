@@ -5,7 +5,7 @@ correctly.
 
 from harness.app import GvcApp
 from harness.diff_fixture import DiffFixture
-from harness.playwrightkit import expect
+from harness.playwrightkit import Page, expect
 import pytest
 
 
@@ -86,14 +86,62 @@ def test_given_find_bar_visible_when_type_keyword_then_occurrences_of_keyword_in
     expect(page.locator(".file-section mark.find-match")).not_to_have_count(0)
 
 
-@pytest.mark.skip('not yet automated')
-def test_given_marks_visible_when_press_command_g_to_find_next_then_next_mark_is_made_current_and_scrolled_into_view() -> None:
-    pass
+def test_given_marks_visible_when_press_command_g_to_find_next_then_next_mark_is_made_current_and_scrolled_into_view(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    _assert_find_step_advances(gvc_app, diff_fixture, key="Meta+g", direction=1)
 
 
-@pytest.mark.skip('not yet automated')
-def test_given_marks_visible_when_press_shift_command_g_to_find_previous_then_previous_mark_is_made_current_and_scrolled_into_view() -> None:
-    pass
+def test_given_marks_visible_when_press_shift_command_g_to_find_previous_then_previous_mark_is_made_current_and_scrolled_into_view(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    _assert_find_step_advances(gvc_app, diff_fixture, key="Shift+Meta+g", direction=-1)
+
+
+def _assert_find_step_advances(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+    *,
+    key: str,
+    direction: int,
+) -> None:
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
+
+    page.press("Meta+f")
+    page.locator("#find-input").fill("modified")
+
+    marks = page.locator("mark.find-match")
+    count = marks.count()
+    assert count >= 2, f"need ≥2 marks to test find-step; got {count}"
+
+    # runFind auto-selects the first match, so find-current should exist
+    expect(page.locator("mark.find-current")).to_have_count(1)
+    initial_idx = _current_mark_index(page)
+    assert initial_idx >= 0, "expected a current mark after fill()"
+
+    page.press(key)
+
+    # The newly current mark must be in the viewport (the scroll-into-view contract)
+    expect(page.locator("mark.find-current")).to_be_in_viewport()
+    new_idx = _current_mark_index(page)
+    expected = (initial_idx + direction) % count
+    assert new_idx == expected, \
+        f"expected current mark index {expected} after {key!r}, got {new_idx}"
+
+
+def _current_mark_index(page: Page) -> int:
+    """Index of the `mark.find-current` within all `mark.find-match`, or -1."""
+    idx = page.evaluate(
+        "() => {"
+        "const marks = Array.from(document.querySelectorAll('mark.find-match'));"
+        "return marks.findIndex(m => m.classList.contains('find-current'));"
+        "}"
+    )
+    assert isinstance(idx, int)
+    return idx
 
 
 @pytest.mark.skip('not yet automated')

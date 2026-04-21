@@ -42,8 +42,8 @@ The public surface (`from harness.playwrightkit import ...`):
 - **`expect(locator)`** — returns a `LocatorAssertions` that polls until the
   condition holds or a 5 s timeout expires (50 ms poll interval).
     - Supports `to_have_count`, `to_have_text`, `to_contain_text`,
-      `to_be_visible`, `to_have_attribute`, `to_have_css`, `to_have_class`,
-      and the `not_*` variants of each.
+      `to_be_visible`, `to_be_in_viewport`, `to_have_attribute`,
+      `to_have_css`, `to_have_class`, and the `not_*` variants of each.
 
 Internally:
 
@@ -80,6 +80,8 @@ drop-in replacement. Current divergences:
 - **Assertion surface.** The positive/`not_*` assertions listed above only;
   no `to_have_value`, `to_be_enabled`, `to_be_checked`, soft assertions,
   or custom timeouts per-assertion (timeout is fixed at construction).
+  `to_be_in_viewport` accepts `ratio` but omits Playwright's full
+  actionability checks (no stable-position / scroll-settling heuristics).
 - **Text normalization.** `to_have_text` collapses whitespace runs to a
   single space and strips — approximating Playwright but not identical.
 - **No auto-waiting on actions.** `click()` fails immediately if no element

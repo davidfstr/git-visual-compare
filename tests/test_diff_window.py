@@ -137,9 +137,26 @@ def test_given_diff_window_visible_then_shows_added_and_deleted_and_modified_and
     assert actual == EXPECTED_FILES
 
 
-@pytest.mark.skip('not yet automated')
-def test_when_file_in_toc_clicked_then_scrolls_diff_of_file_into_view() -> None:
-    pass
+def test_when_file_in_toc_clicked_then_scrolls_diff_of_file_into_view(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
+
+    # Scroll the diff container to the top so later sections are below the fold
+    page.evaluate("() => document.getElementById('diff-content').scrollTo(0, 0)")
+
+    # The last TOC entry's target file section should be out of view before click
+    last_entry = page.locator("#file-outline .outline-file").last
+    href = last_entry.get_attribute("href")
+    assert href is not None and href.startswith("#"), \
+        f"outline entry href missing/unexpected: {href!r}"
+    target = page.locator(href)
+
+    expect(target).not_to_be_in_viewport()
+    last_entry.click()
+    expect(target).to_be_in_viewport()
 
 
 # === Test: Collapsible File Sections ===

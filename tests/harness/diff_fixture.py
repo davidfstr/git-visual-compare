@@ -49,7 +49,12 @@ def make_diff_fixture() -> DiffFixture:
 
     # Commit 1: files that will be deleted / modified / renamed / binary-changed
     (repo / "deleted.py").write_text("to be deleted\n")
-    (repo / "modified.py").write_text("original line\n")
+    # Enough changed lines that the rendered diff reliably exceeds any typical
+    # viewport height — needed by tests that assert scroll behavior.
+    modified_old = "original line\n" + "".join(
+        f"extra line {i} old\n" for i in range(100)
+    )
+    (repo / "modified.py").write_text(modified_old)
     # Give the rename candidate enough content that git is confident it's a rename
     (repo / "renamed_old.py").write_text(
         "\n".join(f"stable line {i}" for i in range(20)) + "\n"
@@ -61,7 +66,10 @@ def make_diff_fixture() -> DiffFixture:
     # Commit 2: add a new file; delete; modify; rename; change binary
     (repo / "added.py").write_text("brand new\n")
     (repo / "deleted.py").unlink()
-    (repo / "modified.py").write_text("modified line\n")
+    modified_new = "modified line\n" + "".join(
+        f"extra line {i} new\n" for i in range(100)
+    )
+    (repo / "modified.py").write_text(modified_new)
     (repo / "renamed_old.py").rename(repo / "renamed_new.py")
     (repo / "binary.bin").write_bytes(b"\x00\x01\x02\x03changed-binary")
     run("git", "add", "-A")

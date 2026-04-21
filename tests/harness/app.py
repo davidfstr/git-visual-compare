@@ -26,9 +26,9 @@ class GvcApp:
         self,
         args: list[str] | None = None,
         cwd: str | Path | None = None,
-    ) -> subprocess.CompletedProcess[bytes]:
+    ) -> WindowInfo:
         """
-        Invokes the gvc CLI and returns immediately.
+        Invokes the gvc CLI and returns the new diff window that opened.
 
         The CLI exits as soon as it has handed the request to the GUI (either
         by spawning a new GUI process or by sending to an existing one).
@@ -36,6 +36,11 @@ class GvcApp:
         `cwd` sets the working directory for the CLI, which controls the
         repository `git diff` runs against.
         """
+        try:
+            old_window_count = len(self._client.list_windows())
+        except GvcGuiNotDoneStarting:
+            old_window_count = 0
+        
         result = subprocess.run(
             [sys.executable, "-m", "gvc.cli"] + (args or []),
             env=self.sandbox.env,
@@ -48,17 +53,19 @@ class GvcApp:
                 f'Expected gvc CLI to exit successfully but '
                 f'it returned exit code {result.returncode}. '
                 f'stderr: {result.stderr.decode("utf-8", errors="replace")!r}')
-        return result
+        
+        windows = self.wait_for_windows(old_window_count + 1)
+        return windows[-1]
 
     # === DOM Access ===
 
-    def page(self, window_id: str) -> Page:
+    def page(self, window: WindowInfo) -> Page:
         """
         Returns a Playwright-shaped Page for the given window.
 
         The window must already exist (use wait_for_windows() first).
         """
-        return Page(self._client, window_id)
+        return Page(self._client, window.id)
 
     # === Window Inspection ===
 

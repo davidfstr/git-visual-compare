@@ -72,9 +72,8 @@ def test_given_diff_window_visible_then_shows_added_and_deleted_and_modified_and
     gvc_app: GvcApp,
     diff_fixture: DiffFixture,
 ) -> None:
-    gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
-    (window,) = gvc_app.wait_for_windows(1)
-    page = gvc_app.page(window.id)
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
 
     entries = page.locator("#file-outline .outline-file")
     expect(entries).to_have_count(len(EXPECTED_FILES))
@@ -114,9 +113,8 @@ def test_when_header_of_file_section_clicked_given_section_expanded_then_section
     gvc_app: GvcApp,
     diff_fixture: DiffFixture,
 ) -> None:
-    gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
-    (window,) = gvc_app.wait_for_windows(1)
-    page = gvc_app.page(window.id)
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
 
     # File sections render as <details open>; clicking the <summary>
     # relies on standard HTML behavior to toggle the `open` attribute.

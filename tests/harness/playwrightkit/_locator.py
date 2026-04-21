@@ -92,6 +92,10 @@ class Locator:
     def click(self) -> None:
         self._page._op("click", self._chain)
 
+    def fill(self, text: str) -> None:
+        """Sets the element's value and fires an input event, like Playwright's fill()."""
+        self._page._op("fill", self._chain, text)
+
     # === Repr ===
 
     def __repr__(self) -> str:

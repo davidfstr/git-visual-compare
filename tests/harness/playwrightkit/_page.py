@@ -20,6 +20,16 @@ class Page:
     def locator(self, selector: str) -> Locator:
         return Locator(self, [{"op": "locator", "selector": selector}])
 
+    # === Actions ===
+
+    def press(self, key: str) -> None:
+        """
+        Dispatches a keydown event to the document.
+
+        `key` uses Playwright's format: e.g. "Meta+f", "Escape", "Shift+Meta+g".
+        """
+        _op(self, "pressKey", [], key)
+
     # === Readers ===
 
     def evaluate(self, js: str) -> object:

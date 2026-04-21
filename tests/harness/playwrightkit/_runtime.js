@@ -91,6 +91,28 @@
                         el.click();
                         return null;
                     }
+                    case 'fill': {
+                        var el = resolveOne(chain);
+                        if (el === null) throw new Error('fill: no matching element');
+                        el.value = arg;
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                        return null;
+                    }
+                    case 'pressKey': {
+                        // arg: e.g. "Meta+f", "Escape", "Shift+Meta+g"
+                        var parts = arg.split('+');
+                        var key = parts[parts.length - 1];
+                        document.dispatchEvent(new KeyboardEvent('keydown', {
+                            key: key,
+                            bubbles: true,
+                            cancelable: true,
+                            metaKey: parts.indexOf('Meta') !== -1,
+                            ctrlKey: parts.indexOf('Control') !== -1,
+                            shiftKey: parts.indexOf('Shift') !== -1,
+                            altKey: parts.indexOf('Alt') !== -1,
+                        }));
+                        return null;
+                    }
                     case 'evaluate': {
                         var el = resolveOne(chain);
                         return (new Function('el', 'return (' + arg + ')(el);'))(el);

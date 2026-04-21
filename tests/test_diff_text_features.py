@@ -3,6 +3,9 @@ Tests that features interacting with the text of a displayed diff operate
 correctly.
 """
 
+from harness.app import GvcApp
+from harness.diff_fixture import DiffFixture
+from harness.playwrightkit import expect
 import pytest
 
 
@@ -49,9 +52,17 @@ def test_given_diff_text_selected_when_press_command_c_then_copies_selected_text
 
 # === Test: Find ===
 
-@pytest.mark.skip('not yet automated')
-def test_when_command_f_pressed_then_find_bar_appears() -> None:
-    pass
+def test_when_command_f_pressed_then_find_bar_appears(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
+
+    expect(page.locator("#find-bar")).not_to_be_visible()
+
+    page.press("Meta+f")
+    expect(page.locator("#find-bar")).to_be_visible()
 
 
 @pytest.mark.skip('not yet automated')
@@ -59,9 +70,20 @@ def test_given_find_bar_visible_when_press_escape_then_find_bar_disappears() -> 
     pass
 
 
-@pytest.mark.skip('not yet automated')
-def test_given_find_bar_visible_when_type_keyword_then_occurrences_of_keyword_in_file_paths_and_diff_content_are_marked() -> None:
-    pass
+def test_given_find_bar_visible_when_type_keyword_then_occurrences_of_keyword_in_file_paths_and_diff_content_are_marked(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
+
+    page.press("Meta+f")
+    # "modified" appears in the outline path "modified.py" and in the diff
+    # line "+modified line" inside the file section — verifying both locations.
+    page.locator("#find-input").fill("modified")
+
+    expect(page.locator("#file-outline mark.find-match")).not_to_have_count(0)
+    expect(page.locator(".file-section mark.find-match")).not_to_have_count(0)
 
 
 @pytest.mark.skip('not yet automated')

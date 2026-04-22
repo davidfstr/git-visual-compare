@@ -1,4 +1,4 @@
-// PlaywrightKit Runtime Library — the in-page JS half of PlaywrightKit.
+// PlaywrightKit Runtime Library: the in-page JS half of PlaywrightKit.
 //
 // Python (`_jsbridge.py`) templates __GVC_KIND__, __GVC_CHAIN__, __GVC_ARG__
 // into this source as JSON literals and ships it through the host's

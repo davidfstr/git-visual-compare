@@ -41,7 +41,7 @@ def make_diff_fixture() -> DiffFixture:
     def run(*cmd: str) -> None:
         subprocess.run(cmd, cwd=repo, check=True, capture_output=True)
 
-    run("git", "init", "-q", "-b", "main")
+    run("git", "init", "--quiet", "--initial-branch=main")
     run("git", "config", "user.email", "test@example.com")
     run("git", "config", "user.name", "Test")
     # Ensure `git diff` detects renames (override any global config)
@@ -49,8 +49,8 @@ def make_diff_fixture() -> DiffFixture:
 
     # Commit 1: files that will be deleted / modified / renamed / binary-changed
     (repo / "deleted.py").write_text("to be deleted\n")
-    # Enough changed lines that the rendered diff reliably exceeds any typical
-    # viewport height — needed by tests that assert scroll behavior.
+    # Add enough changed lines so that the rendered diff reliably exceeds any typical
+    # viewport height. Needed by tests that assert scroll behavior.
     modified_old = "original line\n" + "".join(
         f"extra line {i} old\n" for i in range(100)
     )
@@ -60,8 +60,8 @@ def make_diff_fixture() -> DiffFixture:
         "\n".join(f"stable line {i}" for i in range(20)) + "\n"
     )
     (repo / "binary.bin").write_bytes(b"\x00\x01\x02\x03original-binary")
-    run("git", "add", "-A")
-    run("git", "commit", "-q", "-m", "initial")
+    run("git", "add", "--all")
+    run("git", "commit", "--quiet", "--message", "initial")
 
     # Commit 2: add a new file; delete; modify; rename; change binary
     (repo / "added.py").write_text("brand new\n")
@@ -72,7 +72,7 @@ def make_diff_fixture() -> DiffFixture:
     (repo / "modified.py").write_text(modified_new)
     (repo / "renamed_old.py").rename(repo / "renamed_new.py")
     (repo / "binary.bin").write_bytes(b"\x00\x01\x02\x03changed-binary")
-    run("git", "add", "-A")
-    run("git", "commit", "-q", "-m", "second")
+    run("git", "add", "--all")
+    run("git", "commit", "--quiet", "--message", "second")
 
     return DiffFixture(repo=repo, args=["HEAD~1", "HEAD"])

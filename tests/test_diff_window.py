@@ -42,11 +42,11 @@ def test_cannot_resize_diff_window_to_be_smaller_than_5_rows_or_10_columns() -> 
 # === Test: Light and Dark Mode ===
 
 def test_given_light_mode_when_diff_window_appears_then_window_background_while_appearing_is_light() -> None:
-    _assert_background_color_for_dark_mode(is_dark=False, expected_color="#ffffff")
+    _assert_background_color(is_dark=False, expected_color="#ffffff")
 
 
 def test_given_dark_mode_when_diff_window_appears_then_window_background_while_appearing_is_dark() -> None:
-    _assert_background_color_for_dark_mode(is_dark=True, expected_color="#0d1117")
+    _assert_background_color(is_dark=True, expected_color="#0d1117")
 
 
 def test_given_light_mode_then_shows_correct_diff_colors(
@@ -78,7 +78,7 @@ def test_when_transition_between_light_and_dark_mode_then_diff_colors_change() -
     pass
 
 
-def _assert_background_color_for_dark_mode(*, is_dark: bool, expected_color: str) -> None:
+def _assert_background_color(*, is_dark: bool, expected_color: str) -> None:
     mock_window = MagicMock()
     mock_api = MagicMock()
     mock_api.open_windows.return_value = []

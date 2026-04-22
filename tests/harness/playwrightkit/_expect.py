@@ -200,7 +200,7 @@ class LocatorAssertions:
 
 
 def _normalize_ws(s: str) -> str:
-    """Collapse whitespace runs to one space and strip; matches Playwright's text comparison."""
+    """Collapses whitespace runs to one space and strips; matches Playwright's text comparison."""
     return " ".join(s.split())
 
 

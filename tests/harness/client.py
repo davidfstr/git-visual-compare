@@ -92,10 +92,33 @@ class TestClient:
                 raise GvcGuiNotDoneStarting()
             s.sendall(json.dumps(payload).encode("utf-8"))
             s.shutdown(socket.SHUT_WR)
-            data = b""
-            while chunk := s.recv(4096):
-                data += chunk
+            chunks: list[bytes] = []
+            try:
+                while chunk := s.recv(4096):
+                    chunks.append(chunk)
+            except TimeoutError:
+                gvc_log = self._read_gvc_log(self._sock_path)
+                raise TimeoutError(
+                    f"Timed out waiting for gui-test.sock response "
+                    f"(method={method!r}, sock={self._sock_path}, partial_bytes={sum(len(c) for c in chunks)})\n"
+                    f"--- gvc.log snapshot begin ---\n"
+                    f"{gvc_log}\n"
+                    f"--- gvc.log snapshot end ---"
+                )
+            data = b"".join(chunks)
         return json.loads(data.decode("utf-8").strip())
+
+    @staticmethod
+    def _read_gvc_log(sock_path: Path) -> str:
+        """Best-effort read of the gvc log for a given test sandbox."""
+        # Sandbox layout: <sandbox>/runtime/gui-test.sock, <sandbox>/log/gvc.log
+        log_path = sock_path.parent.parent / "log" / "gvc.log"
+        try:
+            return log_path.read_text(encoding="utf-8", errors="replace")
+        except FileNotFoundError:
+            return f"<gvc log file not found: {log_path}>"
+        except Exception as e:
+            return f"<failed to read {log_path}: {type(e).__name__}: {e}>"
 
 
 class GvcGuiNotDoneStarting(Exception):

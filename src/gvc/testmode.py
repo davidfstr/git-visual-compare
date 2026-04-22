@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import sys
 import threading
 import time
 import traceback
@@ -55,28 +56,54 @@ def _open_test_socket_and_handle_requests(sock_path: Path, api: AppApi) -> None:
             srv.bind(str(sock_path))
             srv.listen(5)
             srv.settimeout(1.0)
+            _log_test_socket(f"listening on {sock_path}")
             while True:
                 try:
                     conn, _ = srv.accept()
                 except socket.timeout:
                     continue
                 except OSError:
+                    _log_test_socket("listener stopping due to socket close")
                     break
                 try:
+                    _log_test_socket("accepted connection")
                     _handle_request(conn, api)
                 except Exception:
+                    _log_test_socket("request handler raised; traceback follows")
                     traceback.print_exc()
     finally:
+        _log_test_socket("removing socket path")
         sock_path.unlink(missing_ok=True)
 
 
 def _handle_request(conn: socket.socket, api: AppApi) -> None:
+    started_at = time.monotonic()  # capture
     with closing(conn):
+        # Force the conn into Python's timeout mode so recv() goes through
+        # poll()/select() before the syscall. Without this (blocking mode,
+        # timeout=None), accepted AF_UNIX conns on macOS + Python 3.14
+        # intermittently don't wake up on peer writes, and recv() hangs
+        # indefinitely with zero bytes delivered even though the peer's
+        # sendall() has returned. The 3s bound keeps the handler from being
+        # trapped forever if that recurs.
+        # NOTE: Duplicated in _handle_request (testmode.py) and receive (ipc.py)
+        conn.settimeout(3.0)
+        
         chunks: list[bytes] = []
-        while chunk := conn.recv(4096):
-            chunks.append(chunk)
-        req = json.loads(b"".join(chunks).decode("utf-8").strip())
+        try:
+            while chunk := conn.recv(4096):
+                chunks.append(chunk)
+        except TimeoutError:
+            _log_test_socket(
+                f"conn.recv timed out with "
+                f"{sum(len(c) for c in chunks)} bytes received"
+            )
+            return
+        raw = b"".join(chunks)
+        _log_test_socket(f"received {len(raw)} bytes")
+        req = json.loads(raw.decode("utf-8").strip())
         method = req.get("method")
+        _log_test_socket(f"dispatching method={method!r}")
 
         if method == "ping":
             from importlib.metadata import version as _version
@@ -102,8 +129,13 @@ def _handle_request(conn: socket.socket, api: AppApi) -> None:
                     # pywebview marshals evaluate_js to the Cocoa main thread
                     # and blocks until the JS returns. The JS itself wraps its
                     # return value as {ok: ...} or {error: ...}.
+                    _log_test_socket(
+                        f"eval_js begin window_id={window_id!r} src_chars={len(src)}"
+                    )
                     result = window.evaluate_js(src)
+                    _log_test_socket("eval_js end")
                 except Exception as e:
+                    _log_test_socket(f"eval_js raised {type(e).__name__}: {e}")
                     result = {"error": f"evaluate_js raised: {e}"}
         elif method == "set_appearance":
             window_id = req.get("window_id")
@@ -125,7 +157,16 @@ def _handle_request(conn: socket.socket, api: AppApi) -> None:
         else:
             result = {"error": f"unknown method: {method!r}"}
 
-        conn.sendall((json.dumps(result) + "\n").encode("utf-8"))
+        response = (json.dumps(result) + "\n").encode("utf-8")
+        conn.sendall(response)
+        elapsed = time.monotonic() - started_at
+        _log_test_socket(
+            f"response sent method={method!r} bytes={len(response)} elapsed={elapsed:.3f}s"
+        )
+
+
+def _log_test_socket(message: str) -> None:
+    print(f"[gvc testmode] {message}", file=sys.stderr, flush=True)
 
 
 def _set_window_appearance(window: webview.Window, appearance: str) -> None:

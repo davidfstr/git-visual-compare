@@ -74,6 +74,15 @@ def try_send(sock_path: Path, request_filepath: Path) -> bool:
 
 
 def receive(conn: socket.socket) -> Path:
+    # Force the conn into Python's timeout mode so recv() goes through
+    # poll()/select() before the syscall. Without this (blocking mode,
+    # timeout=None), accepted AF_UNIX conns on macOS + Python 3.14
+    # intermittently don't wake up on peer writes and recv() hangs
+    # indefinitely with zero bytes delivered even though the peer's
+    # sendall() has returned.
+    # NOTE: Duplicated in _handle_request (testmode.py) and receive (ipc.py)
+    conn.settimeout(3.0)
+    
     chunks: list[bytes] = []
     while chunk := conn.recv(4096):
         chunks.append(chunk)

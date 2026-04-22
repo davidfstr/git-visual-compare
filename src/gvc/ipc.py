@@ -2,9 +2,9 @@
 
 from contextlib import closing
 from dataclasses import dataclass
+from gvc import paths
 import json
 from pathlib import Path
-import platformdirs
 import socket
 import tempfile
 import traceback
@@ -44,7 +44,7 @@ def gui_socket_path() -> Path:
     Return the path to the GUI server's Unix domain socket,
     which may or may not exist.
     """
-    d = Path(platformdirs.user_runtime_dir("gvc"))
+    d = paths.user_runtime_dir()
     d.mkdir(parents=True, exist_ok=True)
     return d / "gui.sock"
 
@@ -74,6 +74,15 @@ def try_send(sock_path: Path, request_filepath: Path) -> bool:
 
 
 def receive(conn: socket.socket) -> Path:
+    # Force the conn into Python's timeout mode so recv() goes through
+    # poll()/select() before the syscall. Without this (blocking mode,
+    # timeout=None), accepted AF_UNIX conns on macOS + Python 3.14
+    # intermittently don't wake up on peer writes and recv() hangs
+    # indefinitely with zero bytes delivered even though the peer's
+    # sendall() has returned.
+    # NOTE: Duplicated in _handle_request (testmode.py) and receive (ipc.py)
+    conn.settimeout(3.0)
+    
     chunks: list[bytes] = []
     while chunk := conn.recv(4096):
         chunks.append(chunk)

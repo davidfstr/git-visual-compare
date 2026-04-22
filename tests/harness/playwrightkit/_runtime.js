@@ -1,0 +1,165 @@
+// PlaywrightKit Runtime Library: the in-page JS half of PlaywrightKit.
+//
+// Python (`_jsbridge.py`) templates __GVC_KIND__, __GVC_CHAIN__, __GVC_ARG__
+// into this source as JSON literals and ships it through the host's
+// eval_js(window_id, src) transport. On the first call it installs the
+// runtime as window.pwk; subsequent calls reuse it.
+//
+// Returns either {ok: <value>} or {error: <string>} so Python can unwrap.
+
+(function (kind, chain, arg) {
+    if (!window.pwk) {
+        window.pwk = (function () {
+            function resolveAll(ops) {
+                var current = [document];
+                for (var i = 0; i < ops.length; i++) {
+                    var op = ops[i];
+                    if (op.op === 'locator') {
+                        var next = [];
+                        for (var j = 0; j < current.length; j++) {
+                            var found = current[j].querySelectorAll(op.selector);
+                            for (var k = 0; k < found.length; k++) next.push(found[k]);
+                        }
+                        current = next;
+                    } else if (op.op === 'nth') {
+                        var idx = op.index < 0 ? current.length + op.index : op.index;
+                        current = (idx >= 0 && idx < current.length) ? [current[idx]] : [];
+                    } else {
+                        throw new Error('unknown chain op: ' + op.op);
+                    }
+                }
+                return current;
+            }
+
+            function resolveOne(ops) {
+                var all = resolveAll(ops);
+                return all.length > 0 ? all[0] : null;
+            }
+
+            // Playwright-like visibility: element attached, not display:none /
+            // visibility:hidden / collapse, non-zero opacity, has at least one
+            // non-zero bounding rect.
+            function isVisible(el) {
+                if (!el || !el.isConnected) return false;
+                var s = getComputedStyle(el);
+                if (s.display === 'none') return false;
+                if (s.visibility === 'hidden' || s.visibility === 'collapse') return false;
+                if (parseFloat(s.opacity) === 0) return false;
+                var rect = el.getBoundingClientRect();
+                if (rect.width === 0 && rect.height === 0) return false;
+                return true;
+            }
+
+            function op(kind, chain, arg) {
+                switch (kind) {
+                    case 'count':
+                        return resolveAll(chain).length;
+                    case 'textContent': {
+                        var el = resolveOne(chain);
+                        return el === null ? null : el.textContent;
+                    }
+                    case 'innerText': {
+                        var el = resolveOne(chain);
+                        return el === null ? null : el.innerText;
+                    }
+                    case 'getAttribute': {
+                        var el = resolveOne(chain);
+                        return el === null ? null : el.getAttribute(arg);
+                    }
+                    case 'hasAttribute': {
+                        var el = resolveOne(chain);
+                        return el === null ? false : el.hasAttribute(arg);
+                    }
+                    case 'inputValue': {
+                        var el = resolveOne(chain);
+                        return el === null ? null : el.value;
+                    }
+                    case 'isVisible':
+                        return isVisible(resolveOne(chain));
+                    case 'inViewport': {
+                        // arg: ratio (0..1). 0 / null means "any intersection".
+                        var el = resolveOne(chain);
+                        if (el === null) return false;
+                        var rect = el.getBoundingClientRect();
+                        var vw = window.innerWidth;
+                        var vh = window.innerHeight;
+                        var ix = Math.max(0, Math.min(rect.right, vw) - Math.max(rect.left, 0));
+                        var iy = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0));
+                        var intersectionArea = ix * iy;
+                        var ratio = (typeof arg === 'number') ? arg : 0;
+                        if (ratio <= 0) return intersectionArea > 0;
+                        var elArea = rect.width * rect.height;
+                        if (elArea === 0) return false;
+                        return (intersectionArea / elArea) >= ratio;
+                    }
+                    case 'computedCss': {
+                        var el = resolveOne(chain);
+                        if (el === null) return null;
+                        return getComputedStyle(el)[arg];
+                    }
+                    case 'classList': {
+                        var el = resolveOne(chain);
+                        return el === null ? null : Array.prototype.slice.call(el.classList);
+                    }
+                    case 'click': {
+                        var el = resolveOne(chain);
+                        if (el === null) throw new Error('click: no matching element');
+                        el.click();
+                        return null;
+                    }
+                    case 'fill': {
+                        var el = resolveOne(chain);
+                        if (el === null) throw new Error('fill: no matching element');
+                        el.value = arg;
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                        return null;
+                    }
+                    case 'pressKey': {
+                        // arg: e.g. "Meta+f", "Escape", "Shift+Meta+g"
+                        // Targets the resolved element when chain is non-empty
+                        // (focusing it first, Playwright-style), else document.
+                        var parts = arg.split('+');
+                        var key = parts[parts.length - 1];
+                        var target;
+                        if (chain.length > 0) {
+                            target = resolveOne(chain);
+                            if (target === null) throw new Error('pressKey: no matching element');
+                            if (typeof target.focus === 'function') target.focus();
+                        } else {
+                            target = document;
+                        }
+                        target.dispatchEvent(new KeyboardEvent('keydown', {
+                            key: key,
+                            bubbles: true,
+                            cancelable: true,
+                            metaKey: parts.indexOf('Meta') !== -1,
+                            ctrlKey: parts.indexOf('Control') !== -1,
+                            shiftKey: parts.indexOf('Shift') !== -1,
+                            altKey: parts.indexOf('Alt') !== -1,
+                        }));
+                        return null;
+                    }
+                    case 'evaluate': {
+                        var el = resolveOne(chain);
+                        return (new Function('el', 'return (' + arg + ')(el);'))(el);
+                    }
+                    case 'evaluatePage': {
+                        return (new Function('return (' + arg + ')();'))();
+                    }
+                    default:
+                        throw new Error('unknown op: ' + kind);
+                }
+            }
+
+            return { op: op, resolveAll: resolveAll, resolveOne: resolveOne, isVisible: isVisible };
+        })();
+    }
+
+    try {
+        // Normalise undefined → null so JSON.stringify doesn't drop the `ok` key
+        var result = window.pwk.op(kind, chain, arg);
+        return { ok: result === undefined ? null : result };
+    } catch (e) {
+        return { error: (e && e.message) ? e.message : String(e) };
+    }
+})(__GVC_KIND__, __GVC_CHAIN__, __GVC_ARG__)

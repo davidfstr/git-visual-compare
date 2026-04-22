@@ -1,15 +1,14 @@
 """Persistent user preferences, stored as JSON."""
 
 from dataclasses import asdict, dataclass
+from gvc import paths
 import json
 import os
 from pathlib import Path
-import platformdirs
 import tempfile
 from typing import TypedDict
 
 
-_APP_NAME = "gvc"
 _PREFS_FILE = "prefs.json"
 
 
@@ -21,7 +20,7 @@ class Prefs:
 
     @classmethod
     def _path(cls) -> Path:
-        prefs_dirpath = Path(platformdirs.user_data_dir(_APP_NAME))
+        prefs_dirpath = paths.user_data_dir()
         prefs_dirpath.mkdir(parents=True, exist_ok=True)
         return prefs_dirpath / _PREFS_FILE
 

@@ -11,9 +11,10 @@ Persistent GUI server process.
 
 from contextlib import closing
 import datetime as dt
+from gvc import paths
 from importlib.metadata import version
+import os
 from pathlib import Path
-import platformdirs
 import socket
 import sys
 import threading
@@ -31,7 +32,7 @@ def main() -> None:
     request_filepath = Path(sys.argv[1])
     
     # Redirect stderr to a persistent log file so tracebacks are observable.
-    log_dirpath = Path(platformdirs.user_log_dir("gvc"))
+    log_dirpath = paths.user_log_dir()
     log_dirpath.mkdir(parents=True, exist_ok=True)
     log_filepath = log_dirpath / "gvc.log"
     # NOTE: Replace log whenever process restarts, to prevent growing without bound
@@ -47,6 +48,7 @@ def main() -> None:
         # Delete any preexisting Unix socket
         sock_path.unlink(missing_ok=True)
         server_sock.bind(str(sock_path))
+        testmode_close = None
         try:
             server_sock.listen(5)  # maximum backlog of 5 pending connections
 
@@ -67,6 +69,11 @@ def main() -> None:
 
             # Single shared AppApi for all windows in this process
             api = AppApi(Prefs.load())
+
+            # Start test mode, if requested
+            if os.environ.get("GVC_TEST_MODE"):
+                from gvc import testmode
+                testmode_close = testmode.start(api)
 
             # Start socket listener thread
             t = threading.Thread(
@@ -90,6 +97,8 @@ def main() -> None:
             # Run the Cocoa event loop, until Cmd+Q or webview.stop() called
             webview.start(private_mode=False)
         finally:
+            if testmode_close is not None:
+                testmode_close()
             sock_path.unlink(missing_ok=True)
 
 

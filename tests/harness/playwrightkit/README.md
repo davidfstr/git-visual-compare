@@ -30,7 +30,8 @@ lifted out into its own library when another project needs the same shape.
 The public surface (`from harness.playwrightkit import ...`):
 
 - **`Page`** — a handle to one browser-like context, identified by an opaque
-  window id. Methods: `locator(selector)`, `evaluate(js)`.
+  window id. Methods: `locator(selector)`, `evaluate(js)`, `press(key)`
+  (dispatches a `KeyboardEvent` to `document`).
 - **`Locator`** — a lazy, immutable selector chain.
     - Chaining via `.locator()`, `.nth()`, `.first`, `.last` returns a new
       locator and performs **zero** round-trips.
@@ -38,7 +39,7 @@ The public surface (`from harness.playwrightkit import ...`):
       the document root (matching Playwright semantics).
         - Readers: `count`, `text_content`, `inner_text`, `get_attribute`,
           `input_value`, `is_visible`, `evaluate`.
-        - Actions: `click`.
+        - Actions: `click`, `fill`, `press`.
 - **`expect(locator)`** — returns a `LocatorAssertions` that polls until the
   condition holds or a 5 s timeout expires (50 ms poll interval).
     - Supports `to_have_count`, `to_have_text`, `to_contain_text`,
@@ -72,8 +73,22 @@ drop-in replacement. Current divergences:
   implemented.
 - **Narrower locator chaining.** `.locator()`, `.nth()`, `.first`, `.last`
   only. No `.filter()`, `.and_()`, `.or_()`, `.get_by_*()`.
-- **Actions.** Only `click()`. No typing, hover, drag, file upload,
-  keyboard/mouse events, focus, scroll-into-view.
+- **Actions.** `click()`, `fill()` (sets `el.value` + fires an `input`
+  event), and `press(key)` (dispatches a synthesized `KeyboardEvent` —
+  `Page.press` targets `document`, `Locator.press` targets the resolved
+  element). No hover, drag, file upload, mouse events, focus,
+  scroll-into-view, or text selection. `fill`/`press` take a single chain
+  and a single argument; no multi-target op shape exists yet, so actions
+  needing a source *and* target (e.g. `drag_to`) would be the first to
+  introduce one.
+- **Clipboard.** No clipboard read/write. `navigator.clipboard` is
+  typically blocked in `pywebview` contexts, so tests that need to
+  inspect the clipboard should add a host-side RPC (e.g. `pbpaste` on
+  macOS, `NSPasteboard`) rather than a PlaywrightKit op.
+- **Text selection.** Synthesized `MouseEvent`s do not drive native text
+  selection in most webviews; a future `select_text`-style op should use
+  the JS `Selection`/`Range` API (`getSelection().setBaseAndExtent(...)`)
+  rather than mouse-down/move/up.
 - **Visibility heuristic.** `isVisible` checks `display`, `visibility`,
   `opacity`, and bounding rect — it does **not** consult Playwright's full
   actionability model (pointer-events, overlap, stable position, etc.).

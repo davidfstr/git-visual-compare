@@ -1,6 +1,7 @@
 """Tests that usage of the "gvc" command line utility behaves correctly."""
 
 from harness.app import GvcApp
+from harness.diff_fixture import DiffFixture
 import pytest
 
 
@@ -8,18 +9,20 @@ import pytest
 
 def test_when_gvc_run_in_terminal_given_no_gui_running_then_starts_gui_and_opens_new_diff_window(
     gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
 ) -> None:
-    gvc_app.run_cli(["HEAD~1", "HEAD"])
+    gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
     gvc_app.wait_for_windows(1)
 
 
 def test_when_gvc_run_in_terminal_given_gui_running_then_opens_new_diff_window_in_existing_gui(
     gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
 ) -> None:
-    gvc_app.run_cli(["HEAD~1", "HEAD"])
+    gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
     gvc_app.wait_for_windows(1)
 
-    gvc_app.run_cli(["HEAD~2", "HEAD~1"])
+    gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
     gvc_app.wait_for_windows(2)
 
 

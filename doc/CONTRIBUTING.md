@@ -14,6 +14,12 @@ To install your development copy of gvc globally:
 pipx install -e .
 ```
 
+### Running Tests
+
+```bash
+pytest
+```
+
 ### Type Checking Python
 
 Run mypy to check for type errors:

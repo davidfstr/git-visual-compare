@@ -116,9 +116,19 @@
                     }
                     case 'pressKey': {
                         // arg: e.g. "Meta+f", "Escape", "Shift+Meta+g"
+                        // Targets the resolved element when chain is non-empty
+                        // (focusing it first, Playwright-style), else document.
                         var parts = arg.split('+');
                         var key = parts[parts.length - 1];
-                        document.dispatchEvent(new KeyboardEvent('keydown', {
+                        var target;
+                        if (chain.length > 0) {
+                            target = resolveOne(chain);
+                            if (target === null) throw new Error('pressKey: no matching element');
+                            if (typeof target.focus === 'function') target.focus();
+                        } else {
+                            target = document;
+                        }
+                        target.dispatchEvent(new KeyboardEvent('keydown', {
                             key: key,
                             bubbles: true,
                             cancelable: true,

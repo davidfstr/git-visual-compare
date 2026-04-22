@@ -65,9 +65,21 @@ def test_when_command_f_pressed_then_find_bar_appears(
     expect(page.locator("#find-bar")).to_be_visible()
 
 
-@pytest.mark.skip('not yet automated')
-def test_given_find_bar_visible_when_press_escape_then_find_bar_disappears() -> None:
-    pass
+def test_given_find_bar_visible_when_press_escape_then_find_bar_disappears(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
+
+    page.press("Meta+f")
+    expect(page.locator("#find-bar")).to_be_visible()
+
+    # Dispatch Escape from the find input — simulates the user pressing Escape
+    # while focus is in the input. The handler is at document level so the
+    # event bubbles up to it.
+    page.locator("#find-input").press("Escape")
+    expect(page.locator("#find-bar")).not_to_be_visible()
 
 
 def test_given_find_bar_visible_when_type_keyword_then_occurrences_of_keyword_in_file_paths_and_diff_content_are_marked(

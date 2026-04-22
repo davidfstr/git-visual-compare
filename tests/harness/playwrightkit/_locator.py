@@ -96,6 +96,14 @@ class Locator:
         """Sets the element's value and fires an input event, like Playwright's fill()."""
         self._page._op("fill", self._chain, text)
 
+    def press(self, key: str) -> None:
+        """
+        Focuses the matched element and dispatches a keydown event to it.
+
+        `key` uses Playwright's format: e.g. "Escape", "Meta+f", "Shift+Meta+g".
+        """
+        self._page._op("pressKey", self._chain, key)
+
     # === Repr ===
 
     def __repr__(self) -> str:

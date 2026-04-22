@@ -17,13 +17,16 @@ import sys
 import threading
 import time
 import traceback
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 import webview
 from webview.platforms.cocoa import BrowserView
 
 if TYPE_CHECKING:
     from gvc.app_api import AppApi
 
+
+# ------------------------------------------------------------------------------
+# Start
 
 def start(api: AppApi) -> Callable[[], None]:
     """
@@ -75,6 +78,9 @@ def _open_test_socket_and_handle_requests(sock_path: Path, api: AppApi) -> None:
         _log_test_socket("removing socket path")
         sock_path.unlink(missing_ok=True)
 
+
+# ------------------------------------------------------------------------------
+# Handle Request
 
 def _handle_request(conn: socket.socket, api: AppApi) -> None:
     started_at = time.monotonic()  # capture
@@ -154,6 +160,11 @@ def _handle_request(conn: socket.socket, api: AppApi) -> None:
                     result = {"ok": None}
                 except Exception as e:
                     result = {"error": str(e)}
+        elif method == "show_about_panel_and_list_texts":
+            try:
+                result = _show_about_panel_and_list_texts()
+            except Exception as e:
+                result = {"error": str(e)}
         else:
             result = {"error": f"unknown method: {method!r}"}
 
@@ -165,9 +176,8 @@ def _handle_request(conn: socket.socket, api: AppApi) -> None:
         )
 
 
-def _log_test_socket(message: str) -> None:
-    print(f"[gvc testmode] {message}", file=sys.stderr, flush=True)
-
+# ------------------------------------------------------------------------------
+# Request: _set_window_appearance
 
 def _set_window_appearance(window: webview.Window, appearance: str) -> None:
     """Forces `window` into light or dark appearance; safe to call from a background thread."""
@@ -207,3 +217,91 @@ def _set_window_appearance(window: webview.Window, appearance: str) -> None:
     done.wait(timeout=5.0)
     if error is not None:
         raise error
+
+
+# ------------------------------------------------------------------------------
+# Request: _show_about_panel_and_list_texts
+
+def _show_about_panel_and_list_texts() -> list[str]:
+    app = AppKit.NSApplication.sharedApplication()
+    _run_on_main_thread(lambda: _trigger_about_menu_item(app), timeout=5.0)
+    texts = _run_on_main_thread(lambda: _list_about_panel_texts(app), timeout=5.0)
+    return texts
+
+
+def _trigger_about_menu_item(app: AppKit.NSApplication) -> None:
+    main_menu = app.mainMenu()
+    if main_menu is None:
+        raise RuntimeError("Main menu not found")
+    app_menu_item = main_menu.itemAtIndex_(0)
+    if app_menu_item is None:
+        raise RuntimeError("App menu item not found")
+    app_menu = app_menu_item.submenu()
+    if app_menu is None:
+        raise RuntimeError("App menu not found")
+
+    for i in range(app_menu.numberOfItems()):
+        item = app_menu.itemAtIndex_(i)
+        if item.action() == "showAboutPanel:":
+            item.target().showAboutPanel_(item)
+            return
+    raise RuntimeError("About menu item not found")
+
+
+def _list_about_panel_texts(app: AppKit.NSApplication) -> list[str]:
+    # Locate About Panel window
+    for window in app.windows():
+        if type(window).__name__ == "NSPanel" and window.title() == "":
+            break
+    else:
+        return []
+
+    content_view = window.contentView()
+    assert content_view is not None
+
+    observed: list[str] = []
+    _collect_string_values_from_descendent_views(content_view, observed)
+    return observed
+
+
+def _collect_string_values_from_descendent_views(view: AppKit.NSView, out: list[str]) -> None:
+    # Collect string value from this view
+    if hasattr(view, "stringValue"):
+        value = view.stringValue()
+        assert isinstance(value, str)
+        out.append(value)
+
+    # Recursively explore descendent views
+    for subview in view.subviews():
+        _collect_string_values_from_descendent_views(subview, out)
+
+
+# ------------------------------------------------------------------------------
+# Utility
+
+def _log_test_socket(message: str) -> None:
+    print(f"[gvc testmode] {message}", file=sys.stderr, flush=True)
+
+
+def _run_on_main_thread[_T](func: Callable[[], _T], timeout: float) -> _T:
+    done = threading.Event()
+    result: _T | None = None
+    error: BaseException | None = None
+    def _block() -> None:
+        nonlocal error, result
+        try:
+            result = func()
+        except BaseException as e:
+            error = e
+        finally:
+            done.set()
+
+    NSOperationQueue.mainQueue().addOperationWithBlock_(_block)
+    if not done.wait(timeout=timeout):
+        raise TimeoutError("timed out waiting for main-thread operation")
+    if error is not None:
+        raise error
+    return cast(_T, result)
+
+
+# ------------------------------------------------------------------------------

@@ -102,6 +102,10 @@ class GvcApp:
         """
         self._client.set_appearance(window.id, appearance)
 
+    def show_about_panel_and_list_texts(self) -> list[str]:
+        """Opens About via the app menu and returns visible text in the About panel."""
+        return self._client.show_about_panel_and_list_texts()
+
     # === Close ===
 
     def close(self) -> None:

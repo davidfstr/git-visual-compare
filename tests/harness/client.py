@@ -76,6 +76,14 @@ class TestClient:
             )
         return result["ok"]
 
+    def show_about_panel_and_list_texts(self) -> list[str]:
+        result = self._call("show_about_panel_and_list_texts")
+        if not isinstance(result, list):
+            raise RuntimeError(f"unexpected result type: {type(result).__name__}")
+        if not all(isinstance(item, str) for item in result):
+            raise RuntimeError(f"unexpected result payload: {result!r}")
+        return result
+
     # === Utility ===
 
     def _call(self, method: str, **kwargs: Any) -> object:

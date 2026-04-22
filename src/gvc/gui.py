@@ -25,6 +25,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from gvc.app_api import AppApi
 
+# Handles showing the app's About Panel.
+# NOTE: Must hold an explicit reference to the handler to prevent it from being
+#       garbage collected. NSMenuItem - which targets this handler - does not
+#       retain its target.
+_about_panel_handler: object | None = None
+
 
 def main() -> None:
     if len(sys.argv) < 2:
@@ -95,7 +101,7 @@ def main() -> None:
             _open_window(req.title, req.diff_bytes, api)
 
             # Run the Cocoa event loop, until Cmd+Q or webview.stop() called
-            webview.start(private_mode=False)
+            webview.start(func=_define_about_panel_soon, private_mode=False)
         finally:
             if testmode_close is not None:
                 testmode_close()
@@ -181,6 +187,68 @@ def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
     )
 
     create_window(html_doc, title, api)
+
+
+def _define_about_panel_soon() -> None:
+    """
+    Alters the About menu item to use an About Window with the app's full title,
+    "Git Visual Compare (gvc)".
+    
+    Must be called from a background thread.
+    """
+    from PyObjCTools import AppHelper
+    AppHelper.callAfter(_define_about_panel)
+
+
+def _define_about_panel() -> None:
+    """
+    Alters the About menu item to use an About Window with the app's full title,
+    "Git Visual Compare (gvc)".
+    
+    Must be called from the Cocoa main thread.
+    """
+    import AppKit
+    from Foundation import NSObject
+    
+    # Create about panel handler
+    global _about_panel_handler
+    class AboutPanelHandler(NSObject):
+        def showAboutPanel_(self, sender: object) -> None:
+            AppKit.NSApplication.sharedApplication().orderFrontStandardAboutPanelWithOptions_(
+                {
+                    # Override CFBundleDisplayName with a custom app title
+                    "ApplicationName": "Git Visual Compare (gvc)"
+                }
+            )
+    handler = AboutPanelHandler.alloc().init()
+    _about_panel_handler = handler
+
+    # Register about panel handler
+    app = AppKit.NSApplication.sharedApplication()
+    main_menu = app.mainMenu()
+    if main_menu is None:
+        print(f"Main menu not found. Cannot define About Panel.", file=sys.stderr)
+        return
+    # NOTE: There is no obvious more-reliable way (than index 0) to identify this menuitem
+    app_menu_item = main_menu.itemAtIndex_(0)
+    if app_menu_item is None:
+        print(f"App menu item not found. Cannot define About Panel.", file=sys.stderr)
+        return
+    app_menu = app_menu_item.submenu()
+    if app_menu is None:
+        print(f"App menu not found. Cannot define About Panel.", file=sys.stderr)
+        return
+    for i in range(app_menu.numberOfItems()):
+        item = app_menu.itemAtIndex_(i)
+        # Look for the About menuitem that pywebview defined in cocoa.py
+        if item.action() == "orderFrontStandardAboutPanel:":
+            about_item = item  # rename
+            about_item.setTarget_(handler)  # override pywebview
+            about_item.setAction_("showAboutPanel:")  # override pywebview
+            break
+    else:
+        print(f"About menuitem not found. Cannot define About Panel.", file=sys.stderr)
+        return
 
 
 if __name__ == "__main__":

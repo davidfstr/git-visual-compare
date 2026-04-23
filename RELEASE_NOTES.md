@@ -3,9 +3,14 @@ Release Notes
 
 ### main
 
+* Branding improvements
+    * About Panel shows full app name
+
 * Development improvements
     * `build_app.py` supports `-e`/`--editable` to build a `.app` that uses
       live `.py` files from the source tree rather than bundled copies.
+    * Automated tests exist
+    * Continuous integration is setup
 
 
 ### v1.0.0 (April 15, 2026)

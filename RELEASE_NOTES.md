@@ -3,6 +3,9 @@ Release Notes
 
 ### main
 
+* Usability improvements
+    * Menuitems with visible keyboard shortcuts exist for every supported keyboard shortcut
+
 * Branding improvements
     * About Panel shows full app name
 

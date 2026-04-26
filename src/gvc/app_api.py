@@ -3,6 +3,8 @@
 #       to stderr
 from __future__ import annotations
 
+import AppKit
+from PyObjCTools import AppHelper
 import threading
 from typing import TYPE_CHECKING
 
@@ -45,18 +47,18 @@ class AppApi:
                 pass
 
     def open_windows(self) -> list[webview.Window]:
-        """Return a snapshot of currently open diff windows."""
+        """Returns a snapshot of currently open diff windows."""
         with self._lock:
             return list(self._windows)  # clone
 
     # === JavaScript API ===
     
     def get_prefs(self) -> PrefsDict:
-        """Return preferences dict to JS on page load."""
+        """Returns preferences dict to JS on page load."""
         return self._prefs.to_dict()
 
     def set_font_size(self, size: int) -> None:
-        """Persist new font size and broadcast to all open windows."""
+        """Persists new font size and broadcasts to all open windows."""
         size = max(self._MIN_FONT_SIZE, min(self._MAX_FONT_SIZE, int(size)))
         self._prefs.font_size = size
         self._prefs.save()
@@ -64,3 +66,7 @@ class AppApi:
         js = f"applyFontSize({size});"
         for w in self.open_windows():
             w.evaluate_js(js)
+
+    def system_beep(self) -> None:
+        """Plays the system alert sound. Called from JS on a background thread."""
+        AppHelper.callAfter(AppKit.NSBeep)

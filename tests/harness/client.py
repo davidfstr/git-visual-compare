@@ -76,6 +76,20 @@ class TestClient:
             )
         return result["ok"]
 
+    def select_menuitem(self, shortcut: str) -> None:
+        """
+        Finds and triggers the menu item whose key equivalent matches `shortcut`
+        (e.g. "Meta+f", "Shift+Meta+g").
+
+        Uses the same modifier-name format as PlaywrightKit's press() / pressKey.
+
+        Raises:
+        * RuntimeError -- if no matching menu item is found
+        """
+        result = self._call("select_menuitem", shortcut=shortcut)
+        if isinstance(result, dict) and "error" in result:
+            raise RuntimeError(str(result["error"]))
+
     def show_about_panel_and_list_texts(self) -> list[str]:
         result = self._call("show_about_panel_and_list_texts")
         if not isinstance(result, list):

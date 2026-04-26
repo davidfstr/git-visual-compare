@@ -92,7 +92,7 @@ class GvcApp:
         """
         return Page(self._client, window.id)
 
-    # === Appearance ===
+    # === UI Access ===
 
     def set_appearance(self, window: WindowInfo, appearance: Literal["light", "dark"]) -> None:
         """
@@ -101,6 +101,13 @@ class GvcApp:
         independently of the current OS setting.
         """
         self._client.set_appearance(window.id, appearance)
+
+    def select_menuitem(self, shortcut: str) -> None:
+        """
+        Finds and triggers the menu item whose key equivalent matches `shortcut`
+        (e.g. "Meta+f"). Same modifier-name format as page.press().
+        """
+        self._client.select_menuitem(shortcut)
 
     def show_about_panel_and_list_texts(self) -> list[str]:
         """Opens About via the app menu and returns visible text in the About panel."""

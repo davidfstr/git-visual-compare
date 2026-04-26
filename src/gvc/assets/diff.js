@@ -305,6 +305,15 @@ function _clearMarks() {
     if (container) container.normalize();
 }
 
+function menuFindStep(/** @type {number} */ direction) {
+    const bar = document.getElementById("find-bar");
+    if (!bar || bar.classList.contains("hidden")) {
+        window.pywebview.api.system_beep();
+        return;
+    }
+    _findStep(direction);
+}
+
 function _findStep(/** @type {number} */ direction, /** @type {boolean} */ suppressWrapFlash = false) {
     if (!find.marks.length) return;
 

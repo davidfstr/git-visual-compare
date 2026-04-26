@@ -157,9 +157,21 @@ def _handle_request(conn: socket.socket, api: AppApi) -> None:
             else:
                 try:
                     _set_window_appearance(window, appearance)
-                    result = {"ok": None}
                 except Exception as e:
                     result = {"error": str(e)}
+                else:
+                    result = {"ok": None}
+        elif method == "select_menuitem":
+            shortcut = req.get("shortcut")
+            if not isinstance(shortcut, str):
+                result = {"error": "shortcut must be str"}
+            else:
+                try:
+                    _select_menuitem_for_shortcut(shortcut)
+                except Exception as e:
+                    result = {"error": str(e)}
+                else:
+                    result = {"ok": None}
         elif method == "show_about_panel_and_list_texts":
             try:
                 result = _show_about_panel_and_list_texts()
@@ -217,6 +229,89 @@ def _set_window_appearance(window: webview.Window, appearance: str) -> None:
     done.wait(timeout=5.0)
     if error is not None:
         raise error
+
+
+# ------------------------------------------------------------------------------
+# Request: _select_menuitem_for_shortcut
+
+_MODIFIER_MAP: dict[str, int] = {
+    "Meta": AppKit.NSCommandKeyMask,
+    "Shift": AppKit.NSShiftKeyMask,
+    "Control": AppKit.NSControlKeyMask,
+    "Alt": AppKit.NSAlternateKeyMask,
+}
+
+_RELEVANT_MODIFIER_BITS: int = (
+    AppKit.NSCommandKeyMask
+    | AppKit.NSShiftKeyMask
+    | AppKit.NSControlKeyMask
+    | AppKit.NSAlternateKeyMask
+)
+
+
+def _select_menuitem_for_shortcut(shortcut: str) -> None:
+    """Find and trigger the menu item matching `shortcut` (e.g. "Meta+f")."""
+    key_char, modifier_mask = _parse_shortcut(shortcut)
+
+    def _trigger() -> None:
+        app = AppKit.NSApplication.sharedApplication()
+        main_menu = app.mainMenu()
+        if main_menu is None:
+            raise RuntimeError("Main menu not found")
+        item = _find_menuitem_by_key(main_menu, key_char, modifier_mask)
+        if item is None:
+            raise RuntimeError(
+                f"No menu item for shortcut={shortcut!r} "
+                f"(key={key_char!r} mask={modifier_mask:#010x})"
+            )
+        app.sendAction_to_from_(item.action(), item.target(), item)
+
+    _run_on_main_thread(_trigger, timeout=5.0)
+
+
+def _parse_shortcut(shortcut: str) -> tuple[str, int]:
+    """
+    Parses a shortcut string like "Meta+f" or "Shift+Meta+g" into
+    (key_char, modifier_mask).
+
+    Edge case: "Meta++" parses as key="+" with Meta modifier.
+    """
+    # NOTE: Uses the same modifier names as PlaywrightKit's pressKey format.
+    parts = shortcut.split("+")
+    modifiers: list[str] = []
+    key_parts: list[str] = []
+    for part in parts:
+        if part in _MODIFIER_MAP:
+            modifiers.append(part)
+        else:
+            key_parts.append(part)
+    key = "+".join(key_parts)
+    mask = 0
+    for m in modifiers:
+        mask |= _MODIFIER_MAP[m]
+    return key, mask
+
+
+def _find_menuitem_by_key(
+    menu: AppKit.NSMenu,
+    key_char: str,
+    modifier_mask: int,
+) -> AppKit.NSMenuItem | None:
+    """Recursively walk `menu` to find an item with matching key+modifier."""
+    for i in range(menu.numberOfItems()):
+        item = menu.itemAtIndex_(i)
+        if item.isSeparatorItem():
+            continue
+        item_key = str(item.keyEquivalent())
+        item_mask = int(item.keyEquivalentModifierMask()) & _RELEVANT_MODIFIER_BITS
+        if item_key == key_char and item_mask == modifier_mask:
+            return item
+        submenu = item.submenu()
+        if submenu is not None:
+            found = _find_menuitem_by_key(submenu, key_char, modifier_mask)
+            if found is not None:
+                return found
+    return None
 
 
 # ------------------------------------------------------------------------------

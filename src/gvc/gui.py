@@ -9,28 +9,34 @@ Persistent GUI server process.
   behavior) so the next request opens instantly.
 """
 
+import AppKit
 from contextlib import closing
 import datetime as dt
+from Foundation import NSObject
 from gvc import paths
 from importlib.metadata import version
 import os
 from pathlib import Path
+from PyObjCTools import AppHelper
 import socket
 import sys
 import threading
 import traceback
 from typing import TYPE_CHECKING
 
-
 if TYPE_CHECKING:
     from gvc.app_api import AppApi
 
-# Handles showing the app's About Panel.
-# NOTE: Must hold an explicit reference to the handler to prevent it from being
-#       garbage collected. NSMenuItem - which targets this handler - does not
-#       retain its target.
-_about_panel_handler: object | None = None
 
+# NOTE: Must hold explicit references to these handlers to prevent them from
+#       being garbage collected. NSMenuItem - which targets its handler - does
+#       not retain its target.
+_about_panel_handler: object | None = None
+_menu_handler: object | None = None
+
+
+# ------------------------------------------------------------------------------
+# Main
 
 def main() -> None:
     if len(sys.argv) < 2:
@@ -101,7 +107,7 @@ def main() -> None:
             _open_window(req.title, req.diff_bytes, api)
 
             # Run the Cocoa event loop, until Cmd+Q or webview.stop() called
-            webview.start(func=_define_about_panel_soon, private_mode=False)
+            webview.start(func=lambda: _setup_menus_soon(api), private_mode=False)
         finally:
             if testmode_close is not None:
                 testmode_close()
@@ -173,6 +179,9 @@ def _socket_listener(server_sock: socket.socket, api: AppApi) -> None:
             traceback.print_exc()
 
 
+# ------------------------------------------------------------------------------
+# Request: Open Window
+
 def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
     """Parse diff bytes and open a new diff window. Thread-safe."""
     from gvc.diff_parser import LargeDiffInfo, parse
@@ -185,15 +194,17 @@ def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
     create_window(html_doc, title, api)
 
 
-def _define_about_panel_soon() -> None:
+# ------------------------------------------------------------------------------
+# Menus
+
+def _setup_menus_soon(api: AppApi) -> None:
     """
-    Alters the About menu item to use an About Window with the app's full title,
-    "Git Visual Compare (gvc)".
-    
+    Customizes menus.
+
     Must be called from a background thread.
     """
-    from PyObjCTools import AppHelper
     AppHelper.callAfter(_define_about_panel)
+    AppHelper.callAfter(_define_menus, api)
 
 
 def _define_about_panel() -> None:
@@ -246,6 +257,172 @@ def _define_about_panel() -> None:
         print(f"About menuitem not found. Cannot define About Panel.", file=sys.stderr)
         return
 
+
+def _define_menus(api: AppApi) -> None:
+    """
+    Adds a File menu with Close, Find items to the Edit menu,
+    and Font Size items to the View menu.
+
+    Must be called from the Cocoa main thread.
+    """
+    app = AppKit.NSApplication.sharedApplication()
+    main_menu = app.mainMenu()
+    if main_menu is None:
+        print("Main menu not found. Cannot define menus.", file=sys.stderr)
+        return
+
+    global _menu_handler
+
+    class GvcMenuHandler(NSObject):
+        def openFind_(self, sender: object) -> None:
+            title = _key_window_title()
+            if title is not None:
+                threading.Thread(
+                    target=_run_js_in_window_titled, args=(api, title, "openFindBar()"), daemon=True
+                ).start()
+
+        def findNext_(self, sender: object) -> None:
+            title = _key_window_title()
+            if title is not None:
+                threading.Thread(
+                    target=_run_js_in_window_titled, args=(api, title, "menuFindStep(1)"), daemon=True
+                ).start()
+
+        def findPrevious_(self, sender: object) -> None:
+            title = _key_window_title()
+            if title is not None:
+                threading.Thread(
+                    target=_run_js_in_window_titled, args=(api, title, "menuFindStep(-1)"), daemon=True
+                ).start()
+
+        def increaseFontSize_(self, sender: object) -> None:
+            threading.Thread(
+                target=_run_js_in_some_window, args=(api, "changeFontSize(1)"), daemon=True
+            ).start()
+
+        def decreaseFontSize_(self, sender: object) -> None:
+            threading.Thread(
+                target=_run_js_in_some_window, args=(api, "changeFontSize(-1)"), daemon=True
+            ).start()
+
+    handler = GvcMenuHandler.alloc().init()
+    _menu_handler = handler
+
+    # File menu
+    if True:
+        file_menu = AppKit.NSMenu.alloc().init()
+        file_menu.setTitle_("File")
+        # NOTE: No target. performClose: goes through the responder chain to the key window.
+        file_menu.addItemWithTitle_action_keyEquivalent_(
+            "Close Window", "performClose:", "w"
+        )
+        
+        file_menu_item = AppKit.NSMenuItem.alloc().init()
+        file_menu_item.setTitle_("File")
+        file_menu_item.setSubmenu_(file_menu)
+        
+        # Insert File menu between app menu and Edit menu
+        main_menu.insertItem_atIndex_(file_menu_item, 1)
+
+    # Edit menu
+    for i in range(main_menu.numberOfItems()):
+        item = main_menu.itemAtIndex_(i)
+        submenu = item.submenu()
+        if not (submenu is not None and str(submenu.title()) == "Edit"):
+            continue
+        
+        submenu.addItem_(AppKit.NSMenuItem.separatorItem())
+
+        find_item = submenu.addItemWithTitle_action_keyEquivalent_(
+            "Find…", "openFind:", "f"
+        )
+        find_item.setTarget_(handler)
+
+        find_next = submenu.addItemWithTitle_action_keyEquivalent_(
+            "Find Next", "findNext:", "g"
+        )
+        find_next.setTarget_(handler)
+
+        find_prev = submenu.addItemWithTitle_action_keyEquivalent_(
+            "Find Previous", "findPrevious:", "g"
+        )
+        find_prev.setTarget_(handler)
+        find_prev.setKeyEquivalentModifierMask_(
+            AppKit.NSCommandKeyMask | AppKit.NSShiftKeyMask
+        )
+        
+        break
+    else:
+        print("Edit menu not found. Cannot add Find items.", file=sys.stderr)
+
+    # View menu
+    for i in range(main_menu.numberOfItems()):
+        item = main_menu.itemAtIndex_(i)
+        submenu = item.submenu()
+        if not (submenu is not None and str(submenu.title()) == "View"):
+            continue
+        
+        # Insert menuitems in reverse order, resulting in final order:
+        # - Increase Font Size
+        # - Decrease Font Size
+        # - ───
+        # - Enter Full Screen
+        
+        submenu.insertItem_atIndex_(AppKit.NSMenuItem.separatorItem(), 0)
+
+        decrease = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+            "Decrease Font Size", "decreaseFontSize:", "-"
+        )
+        decrease.setTarget_(handler)
+        submenu.insertItem_atIndex_(decrease, 0)
+
+        increase = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+            "Increase Font Size", "increaseFontSize:", "+"
+        )
+        increase.setTarget_(handler)
+        submenu.insertItem_atIndex_(increase, 0)
+        
+        break
+    else:
+        print("View menu not found. Cannot add Font Size items.", file=sys.stderr)
+
+
+def _key_window_title() -> str | None:
+    """
+    Returns the title of the current key window.
+    
+    Must be called on the main thread.
+    """
+    kw = AppKit.NSApp.keyWindow()
+    return str(kw.title()) if kw is not None else None
+
+
+def _run_js_in_window_titled(api: AppApi, title: str, js: str) -> None:
+    """
+    Executes js in the pywebview window with the given title.
+    
+    Must be called on a background thread.
+    """
+    for w in api.open_windows():
+        if w.title == title:
+            w.evaluate_js(js)
+            break
+    else:
+        raise ValueError(f'No such window: {title}')
+
+
+def _run_js_in_some_window(api: AppApi, js: str) -> None:
+    """
+    Executes js in any open pywebview window, if there is one.
+    
+    Must be called on a background thread.
+    """
+    windows = api.open_windows()
+    if windows:
+        windows[0].evaluate_js(js)
+
+
+# ------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     main()

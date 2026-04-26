@@ -7,6 +7,7 @@ from harness.app import GvcApp
 from harness.diff_fixture import DiffFixture
 from harness.playwrightkit import Page, expect
 import pytest
+from typing import Literal, assert_never
 
 
 # === Test: Font Size Adjustable ===
@@ -52,7 +53,9 @@ def test_given_diff_text_selected_when_press_command_c_then_copies_selected_text
 
 # === Test: Find ===
 
+@pytest.mark.parametrize("method", ["press_key", "select_menuitem"])
 def test_when_command_f_pressed_then_find_bar_appears(
+    method: Literal["press_key", "select_menuitem"],
     gvc_app: GvcApp,
     diff_fixture: DiffFixture,
 ) -> None:
@@ -61,7 +64,13 @@ def test_when_command_f_pressed_then_find_bar_appears(
 
     expect(page.locator("#find-bar")).not_to_be_visible()
 
-    page.press("Meta+f")
+    if method == "press_key":
+        page.press("Meta+f")
+    elif method == "select_menuitem":
+        gvc_app.select_menuitem("Meta+f")
+    else:
+        assert_never(method)
+
     expect(page.locator("#find-bar")).to_be_visible()
 
 
@@ -98,18 +107,22 @@ def test_given_find_bar_visible_when_type_keyword_then_occurrences_of_keyword_in
     expect(page.locator(".file-section mark.find-match")).not_to_have_count(0)
 
 
+@pytest.mark.parametrize("method", ["press_key", "select_menuitem"])
 def test_given_marks_visible_when_press_command_g_to_find_next_then_next_mark_is_made_current_and_scrolled_into_view(
+    method: Literal["press_key", "select_menuitem"],
     gvc_app: GvcApp,
     diff_fixture: DiffFixture,
 ) -> None:
-    _assert_find_step_advances(gvc_app, diff_fixture, key="Meta+g", direction=1)
+    _assert_find_step_advances(gvc_app, diff_fixture, key="Meta+g", direction=1, method=method)
 
 
+@pytest.mark.parametrize("method", ["press_key", "select_menuitem"])
 def test_given_marks_visible_when_press_shift_command_g_to_find_previous_then_previous_mark_is_made_current_and_scrolled_into_view(
+    method: Literal["press_key", "select_menuitem"],
     gvc_app: GvcApp,
     diff_fixture: DiffFixture,
 ) -> None:
-    _assert_find_step_advances(gvc_app, diff_fixture, key="Shift+Meta+g", direction=-1)
+    _assert_find_step_advances(gvc_app, diff_fixture, key="Shift+Meta+g", direction=-1, method=method)
 
 
 def _assert_find_step_advances(
@@ -118,6 +131,7 @@ def _assert_find_step_advances(
     *,
     key: str,
     direction: int,
+    method: Literal["press_key", "select_menuitem"],
 ) -> None:
     window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
     page = gvc_app.page(window)
@@ -134,7 +148,12 @@ def _assert_find_step_advances(
     initial_idx = _current_mark_index(page)
     assert initial_idx >= 0, "expected a current mark after fill()"
 
-    page.press(key)
+    if method == "press_key":
+        page.press(key)
+    elif method == "select_menuitem":
+        gvc_app.select_menuitem(key)
+    else:
+        assert_never(method)
 
     # The newly current mark must be in the viewport (the scroll-into-view contract)
     expect(page.locator("mark.find-current")).to_be_in_viewport()

@@ -1,5 +1,6 @@
 # AI Coding
 /plan/LOCAL/
+/.claude/worktrees
 
 # Language: JavaScript
 node_modules/

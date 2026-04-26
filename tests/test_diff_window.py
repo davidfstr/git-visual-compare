@@ -3,9 +3,10 @@ Tests that the appearance of diff windows is correct and that immediately
 visible controls have the expected behavior.
 """
 
+from contextlib import closing
 from gvc import window_manager
 from harness.app import GvcApp
-from harness.diff_fixture import DiffFixture, EXPECTED_FILES
+from harness.diff_fixture import DiffFixture, EXPECTED_FILES, make_large_diff_fixture
 from harness.playwrightkit import Page, expect
 import pytest
 import time
@@ -217,3 +218,26 @@ def test_given_diff_window_then_changed_lines_with_trailing_whitespace_have_that
 @pytest.mark.skip('not yet automated')
 def test_given_diff_window_then_two_line_gutters_have_consistent_background_color_regardless_of_adjacent_line_colors() -> None:
     pass
+
+
+# === Test: Large Diffs ===
+
+@pytest.mark.skip('covered by: test_when_confirm_show_large_diff_then_diff_is_displayed')
+def test_given_large_diff_then_diff_window_asks_for_confirmation_before_displaying() -> None:
+    pass
+
+
+def test_when_confirm_show_large_diff_then_diff_is_displayed(
+    gvc_app: GvcApp,
+) -> None:
+    with closing(make_large_diff_fixture()) as fixture:
+        window = gvc_app.run_cli(fixture.args, cwd=fixture.repo)
+        page = gvc_app.page(window)
+
+        gate = page.locator("#large-diff-gate")
+        expect(gate).to_be_visible()
+
+        gate.locator("a").click()
+
+        expect(page.locator("#file-0")).to_be_visible()
+        expect(gate).not_to_be_visible()

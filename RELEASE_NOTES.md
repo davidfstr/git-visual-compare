@@ -12,6 +12,9 @@ Release Notes
     * Automated tests exist
     * Continuous integration is setup
 
+* Bug fixes
+    * "Click here to load" link for large diffs now works
+
 
 ### v1.0.0 (April 15, 2026)
 

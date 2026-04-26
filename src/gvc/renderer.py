@@ -14,22 +14,29 @@ if TYPE_CHECKING:
 # Public API
 
 def render(
-    file_diffs: list[FileDiff] | LargeDiffInfo,
+    file_diffs: list["FileDiff"],
+    large_diff_info: LargeDiffInfo | None = None,
 ) -> str:
     """Return a complete HTML document string for the given diff."""
     css, js, html_template = _assets()
 
-    if isinstance(file_diffs, LargeDiffInfo):
-        outline_html = ""
-        diff_html = _render_large_diff_gate(file_diffs)
-    elif isinstance(file_diffs, list):
-        outline_html = _render_outline(file_diffs)
-        diff_parts = [_render_file(fd, i) for i, fd in enumerate(file_diffs)]
-        diff_html = "\n".join(diff_parts) if diff_parts else (
-            '<p style="padding:24px;color:var(--hunk-fg)">No changes.</p>'
+    outline_html = _render_outline(file_diffs)
+    diff_parts = [_render_file(fd, i) for i, fd in enumerate(file_diffs)]
+    full_diff_html = "\n".join(diff_parts) if diff_parts else (
+        '<p style="padding:24px;color:var(--hunk-fg)">No changes.</p>'
+    )
+
+    if large_diff_info is not None:
+        diff_html = (
+            _render_large_diff_gate(large_diff_info) +
+            f'<template id="full-diff-hidden">'
+            f'<nav id="file-outline">{outline_html}</nav>'
+            f'\n{full_diff_html}'
+            f'</template>'
         )
+        outline_html = ""
     else:
-        assert_never(file_diffs)
+        diff_html = full_diff_html
 
     doc = html_template
     doc = doc.replace("/* INLINE_CSS */", css)

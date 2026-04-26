@@ -180,11 +180,7 @@ def _open_window(title: str, diff_bytes: bytes, api: AppApi) -> None:
     from gvc.window_manager import create_window
 
     large_diff_info = LargeDiffInfo.try_parse(diff_bytes)
-    html_doc = (
-        render(large_diff_info)
-        if large_diff_info is not None
-        else render(parse(diff_bytes))
-    )
+    html_doc = render(parse(diff_bytes), large_diff_info)
 
     create_window(html_doc, title, api)
 

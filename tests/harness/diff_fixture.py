@@ -76,3 +76,27 @@ def make_diff_fixture() -> DiffFixture:
     run("git", "commit", "--quiet", "--message", "second")
 
     return DiffFixture(repo=repo, args=["HEAD~1", "HEAD"])
+
+
+def make_large_diff_fixture() -> DiffFixture:
+    """
+    Creates a temp git repo whose HEAD~1..HEAD diff exceeds the large-diff threshold
+    (>10,000 lines), triggering the 'Click here to load' gate in the diff window.
+    """
+    repo = Path(tempfile.mkdtemp(prefix="gvc-large-diff-fixture-"))
+
+    def run(*cmd: str) -> None:
+        subprocess.run(cmd, cwd=repo, check=True, capture_output=True)
+
+    run("git", "init", "--quiet", "--initial-branch=main")
+    run("git", "config", "user.email", "test@example.com")
+    run("git", "config", "user.name", "Test")
+    run("git", "commit", "--quiet", "--message", "initial", "--allow-empty")
+
+    # Add a file with enough lines to cross the 10,000-line large-diff threshold
+    big_text = "\n".join(f"line {i:05d}" for i in range(11_000)) + "\n"
+    (repo / "big.py").write_text(big_text)
+    run("git", "add", "--all")
+    run("git", "commit", "--quiet", "--message", "add big file")
+
+    return DiffFixture(repo=repo, args=["HEAD~1", "HEAD"])

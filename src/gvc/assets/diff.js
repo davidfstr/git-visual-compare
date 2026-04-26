@@ -29,8 +29,8 @@ window.addEventListener("pywebviewready", async () => {
 
 // Wait for DOM
 document.addEventListener("DOMContentLoaded", () => {
-    setupKeyboard();
-    setupFindBar();
+    _setupKeyboard();
+    _setupFindBar();
 });
 
 // -------------------------------------------------------
@@ -43,7 +43,7 @@ function applyFontSize(/** @type {number} */ size) {
 // -------------------------------------------------------
 // Keyboard Shortcuts
 
-function setupKeyboard() {
+function _setupKeyboard() {
     document.addEventListener("keydown", (e) => {
         const cmd = e.metaKey || e.ctrlKey;
 
@@ -56,21 +56,21 @@ function setupKeyboard() {
 
         // Escape — close find bar
         if (e.key === "Escape") {
-            closeFindBar();
+            _closeFindBar();
             return;
         }
 
         // Cmd+G — find next
         if (cmd && !e.shiftKey && e.key === "g") {
             e.preventDefault();
-            findStep(1);
+            _findStep(1);
             return;
         }
 
         // Shift+Cmd+G — find previous
         if (cmd && e.shiftKey && e.key === "g") {
             e.preventDefault();
-            findStep(-1);
+            _findStep(-1);
             return;
         }
 
@@ -117,7 +117,7 @@ function setAllSections(/** @type {boolean} */ open) {
 // -------------------------------------------------------
 // Find Bar
 
-function setupFindBar() {
+function _setupFindBar() {
     const bar = document.getElementById("find-bar");
     const input = document.getElementById("find-input");
     const btnCase = document.getElementById("btn-case");
@@ -138,14 +138,14 @@ function setupFindBar() {
     // Input change
     input.addEventListener("input", () => {
         find.query = input.value;
-        runFind();
+        _runFind();
     });
 
     // Enter / Shift+Enter in input
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
-            findStep(e.shiftKey ? -1 : 1);
+            _findStep(e.shiftKey ? -1 : 1);
         }
     });
 
@@ -153,24 +153,24 @@ function setupFindBar() {
     btnCase.addEventListener("click", () => {
         find.caseInsensitive = !find.caseInsensitive;
         btnCase.setAttribute("aria-pressed", String(!find.caseInsensitive));
-        runFind();
+        _runFind();
     });
 
     btnWord.addEventListener("click", () => {
         find.wholeWord = !find.wholeWord;
         btnWord.setAttribute("aria-pressed", String(find.wholeWord));
-        runFind();
+        _runFind();
     });
 
     btnRegex.addEventListener("click", () => {
         find.useRegex = !find.useRegex;
         btnRegex.setAttribute("aria-pressed", String(find.useRegex));
-        runFind();
+        _runFind();
     });
 
-    btnPrev.addEventListener("click", () => findStep(-1));
-    btnNext.addEventListener("click", () => findStep(1));
-    btnClose.addEventListener("click", () => closeFindBar());
+    btnPrev.addEventListener("click", () => _findStep(-1));
+    btnNext.addEventListener("click", () => _findStep(1));
+    btnClose.addEventListener("click", () => _closeFindBar());
 }
 
 function openFindBar() {
@@ -184,36 +184,20 @@ function openFindBar() {
     input.select();
 }
 
-function closeFindBar() {
+function _closeFindBar() {
     const bar = document.getElementById("find-bar");
     if (!bar) { throw new Error("find-bar not found"); }
     
     bar.classList.add("hidden");
-    clearMarks();
+    _clearMarks();
     find.current = -1;
 }
 
 // -------------------------------------------------------
 // Find Implementation
 
-function buildRegex(/** @type {string} */ query) {
-    if (!query) return null;
-    try {
-        let pattern = find.useRegex ? query : escapeRegex(query);
-        if (find.wholeWord) pattern = `\\b${pattern}\\b`;
-        const flags = find.caseInsensitive ? "gi" : "g";
-        return new RegExp(pattern, flags);
-    } catch (e) {
-        return null; // invalid regex
-    }
-}
-
-function escapeRegex(/** @type {string} */ s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function runFind() {
-    clearMarks();
+function _runFind() {
+    _clearMarks();
     find.marks = [];
     find.current = -1;
 
@@ -225,7 +209,7 @@ function runFind() {
         return;
     }
 
-    const regex = buildRegex(find.query);
+    const regex = _buildRegex(find.query);
     if (!regex) {
         input.classList.add("no-match");
         return;
@@ -287,11 +271,27 @@ function runFind() {
         input.classList.add("no-match");
     } else {
         input.classList.remove("no-match");
-        findStep(1, true); // jump to first match without wrap flash
+        _findStep(1, true); // jump to first match without wrap flash
     }
 }
 
-function clearMarks() {
+function _buildRegex(/** @type {string} */ query) {
+    if (!query) return null;
+    try {
+        let pattern = find.useRegex ? query : _escapeRegex(query);
+        if (find.wholeWord) pattern = `\\b${pattern}\\b`;
+        const flags = find.caseInsensitive ? "gi" : "g";
+        return new RegExp(pattern, flags);
+    } catch (e) {
+        return null; // invalid regex
+    }
+}
+
+function _escapeRegex(/** @type {string} */ s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function _clearMarks() {
     // Replace each <mark> with its text content
     for (const mark of find.marks) {
         if (mark.parentNode) {
@@ -305,7 +305,7 @@ function clearMarks() {
     if (container) container.normalize();
 }
 
-function findStep(/** @type {number} */ direction, /** @type {boolean} */ suppressWrapFlash = false) {
+function _findStep(/** @type {number} */ direction, /** @type {boolean} */ suppressWrapFlash = false) {
     if (!find.marks.length) return;
 
     const prev = find.current;
@@ -330,7 +330,7 @@ function findStep(/** @type {number} */ direction, /** @type {boolean} */ suppre
     mark.scrollIntoView({ block: "center", inline: "nearest" });
 
     if (wrapped && !suppressWrapFlash) {
-        flashWrapOverlay();
+        _flashWrapOverlay();
     }
 }
 
@@ -340,7 +340,7 @@ function findStep(/** @type {number} */ direction, /** @type {boolean} */ suppre
 /** @type {ReturnType<typeof setTimeout> | null} */
 let _wrapTimer = null;
 
-function flashWrapOverlay() {
+function _flashWrapOverlay() {
     const overlay = document.getElementById("wrap-overlay");
     if (!overlay) return;
 

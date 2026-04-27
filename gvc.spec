@@ -6,6 +6,9 @@ from importlib.metadata import version as _pkg_version
 import os
 
 
+_BUNDLE_ID = "net.dafoster.gvc"
+_BUNDLE_NAME = "gvc"
+_COPYRIGHT = "Copyright © 2026 David Foster"
 _VERSION = _pkg_version("gvc")
 
 a = Analysis(
@@ -52,16 +55,16 @@ app = BUNDLE(
     coll,
     name="gvc.app",
     icon="build/icon.icns",
-    bundle_identifier="net.dafoster.gvc",
+    bundle_identifier=_BUNDLE_ID,
     version=_VERSION,
-    # NOTE: Duplicated in gvc.spec and _configure_app_identity()
+    # NOTE: Duplicated in gvc.spec and _configure_app_identity() and stub_app.py
     info_plist={
-        "CFBundleName": "gvc",
-        "CFBundleDisplayName": "gvc",
+        "CFBundleDisplayName": _BUNDLE_NAME,
+        "CFBundleName": _BUNDLE_NAME,
         "CFBundleShortVersionString": _VERSION,
         "CFBundleVersion": _VERSION,
-        "NSHumanReadableCopyright": "Copyright © 2026 David Foster",
-        "NSHighResolutionCapable": True,
         "LSUIElement": False,
+        "NSHighResolutionCapable": True,
+        "NSHumanReadableCopyright": _COPYRIGHT,
     },
 )

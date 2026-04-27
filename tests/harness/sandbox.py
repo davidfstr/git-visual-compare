@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+from typing import Self
 
 
 class GvcSandbox:
@@ -29,7 +30,19 @@ class GvcSandbox:
             **os.environ,
             "GVC_PLATFORMDIRS_ROOT": str(self.root),
             "GVC_TEST_MODE": "1",
+            # Disable auto-bundling by default, for fast test startup time.
+            # Use enable_stub_app() to opt in.
+            "GVC_NO_STUB_APP": "1",
         }
+
+    def enable_stub_app(self) -> Self:
+        """
+        Switches this sandbox to generate a real stub app.
+        Removes GVC_NO_STUB_APP and redirects stub generation into the sandbox.
+        """
+        self.env.pop("GVC_NO_STUB_APP", None)
+        self.env["GVC_STUB_APP_DIR"] = str(self.root / "stub_app")
+        return self
 
     def close(self) -> None:
         shutil.rmtree(self.root, ignore_errors=True)

@@ -4,10 +4,13 @@ Release Notes
 ### main
 
 * Usability improvements
+    * App has stable bundle identity that can be targeted with automation tools 
+      like Keyboard Maestro
     * Menuitems with visible keyboard shortcuts exist for every supported keyboard shortcut
 
 * Branding improvements
-    * About Panel shows full app name
+    * Dock icon shows app name ("gvc") when installed from PyPI/pip/pipx
+    * About Panel shows full app name ("Git Visual Compare")
 
 * Development improvements
     * `build_app.py` supports `-e`/`--editable` to build a `.app` that uses

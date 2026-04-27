@@ -129,16 +129,27 @@ def _configure_app_identity() -> None:
 
     # Define app name for the App menu
     NSProcessInfo.processInfo().setProcessName_("gvc")
+    
+    # NOTE: Duplicated in gvc.spec and _configure_app_identity() and stub_app.py
+    bundle_info_overrides: dict[str, object]
+    if True:
+        _BUNDLE_NAME = "gvc"
+        _COPYRIGHT = "Copyright © 2026 David Foster"
+        _VERSION = version("gvc")
+        
+        bundle_info_overrides = {
+            "CFBundleDisplayName": _BUNDLE_NAME,
+            "CFBundleName": _BUNDLE_NAME,
+            "CFBundleShortVersionString": _VERSION,
+            "CFBundleVersion": _VERSION,
+            "NSHumanReadableCopyright": _COPYRIGHT,
+        }
 
     # Define app metadata for the About Box
-    # NOTE: Duplicated in gvc.spec and _configure_app_identity()
     bundle_info = NSBundle.mainBundle().infoDictionary()
-    bundle_info["CFBundleName"] = "gvc"
-    bundle_info["CFBundleDisplayName"] = "gvc"
-    bundle_info["CFBundleShortVersionString"] = version("gvc")
-    bundle_info["CFBundleVersion"] = version("gvc")
-    bundle_info["NSHumanReadableCopyright"] = "Copyright © 2026 David Foster"
-
+    for k, v in bundle_info_overrides.items():
+        bundle_info[k] = v
+    
     # Define app icon for the Dock icon and About Box
     icon_resource = files("gvc").joinpath("assets/icon.png")
     with as_file(icon_resource) as icon_path:

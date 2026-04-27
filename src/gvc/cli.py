@@ -6,6 +6,7 @@ Entry point:
 - Hand offs diff data to the persistent GUI server process
 """
 
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -47,20 +48,44 @@ def main() -> None:
         # Existing GUI server accepted the request
         pass
     else:
-        # No GUI server running. Launch one:
-        # - If this cli.py itself lives inside a distributed .app bundle, launch it.
-        # - Otherwise fall back to an unbundled `python -m gvc.gui`.
+        # No GUI server running. Launch one.
         bundle_exe = _enclosing_app_executable()
         if bundle_exe is not None:
-            argv = [str(bundle_exe), "--gui-server", str(request_filepath)]
+            # Already running inside an .app bundle. Launch GUI from the same bundle.
+            subprocess.Popen(
+                [str(bundle_exe), "--gui-server", str(request_filepath)],
+                start_new_session=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        elif not os.environ.get("GVC_NO_STUB_APP"):
+            # Locate/create stub .app
+            from gvc import stub_app
+            app_path = stub_app.ensure_exists()
+            subprocess.run(
+                [
+                    "open",
+                    "--new",
+                    # Register the .app as the bundle identity before the
+                    # process starts. This registration is what makes the
+                    # Dock icon show "gvc" (from the .app) rather than "Python"
+                    # (from the "python" process).
+                    "-a", str(app_path),
+                    "--args", "--gui-server", str(request_filepath)
+                ],
+                    # TODO: Why not check?
+                check=False,
+            )
         else:
-            argv = [sys.executable, "-m", "gvc.gui", str(request_filepath)]
-        subprocess.Popen(
-            argv,
-            start_new_session=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+            # Launch the GUI from source
+            # NOTE: Because the GUI lacks an enclosing .app when launched in
+            #       this way, its Dock icon will NOT say "gvc"
+            subprocess.Popen(
+                [sys.executable, "-m", "gvc.gui", str(request_filepath)],
+                start_new_session=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
 
 
 def _enclosing_app_executable() -> Path | None:

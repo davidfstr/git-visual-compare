@@ -13,6 +13,7 @@ dependencies = [
     # AppKit, Foundation
     "pyobjc-framework-Cocoa; sys_platform == 'darwin'",
     "pytest (>=9.0.3,<10.0.0)",
+    "pytest-subtests (>=0.12)",
 ]
 
 [project.urls]

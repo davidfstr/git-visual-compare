@@ -7,7 +7,8 @@ import signal
 import subprocess
 import sys
 import time
-from typing import Literal
+from types import TracebackType
+from typing import Literal, Self
 
 
 class GvcApp:
@@ -20,6 +21,19 @@ class GvcApp:
     def __init__(self, sandbox: GvcSandbox) -> None:
         self.sandbox = sandbox
         self._client = TestClient(sandbox.runtime_dir / "gui-test.sock")
+    
+    # === Context Manager ===
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        self.close()
 
     # === CLI ===
 
@@ -27,6 +41,7 @@ class GvcApp:
         self,
         args: list[str] | None = None,
         cwd: str | Path | None = None,
+        timeout: float = 5.0,
     ) -> WindowInfo:
         """
         Invokes the gvc CLI and returns the new diff window that opened.
@@ -41,7 +56,7 @@ class GvcApp:
             old_window_count = len(self._client.list_windows())
         except GvcGuiNotDoneStarting:
             old_window_count = 0
-        
+
         result = subprocess.run(
             [sys.executable, "-m", "gvc.cli"] + (args or []),
             env=self.sandbox.env,
@@ -54,8 +69,8 @@ class GvcApp:
                 f'Expected gvc CLI to exit successfully but '
                 f'it returned exit code {result.returncode}. '
                 f'stderr: {result.stderr.decode("utf-8", errors="replace")!r}')
-        
-        windows = self.wait_for_windows(old_window_count + 1)
+
+        windows = self.wait_for_windows(old_window_count + 1, timeout=timeout)
         return windows[-1]
 
     # === Window Inspection ===

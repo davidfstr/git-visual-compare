@@ -6,9 +6,7 @@ from collections.abc import Generator
 from harness.app import GvcApp
 from harness.diff_fixture import DiffFixture, make_diff_fixture
 from harness.sandbox import GvcSandbox
-from pathlib import Path
 import pytest
-import sys
 from typing import Any
 
 
@@ -20,14 +18,14 @@ def gvc_sandbox(
     request: pytest.FixtureRequest,
 ) -> Generator[GvcSandbox, None, None]:
     sandbox = GvcSandbox()
-    yield sandbox
     try:
+        yield sandbox
+    finally:
         # If the test which this fixture was used in failed (during its "call" phase)
-        # then print the sandbox's log file before destroying the sandbox
+        # then print the sandbox's log files before destroying the sandbox
         rep_call: pytest.TestReport | None = getattr(request.node, "rep_call", None)
         if rep_call is not None and rep_call.failed:
-            _print_gvc_log(sandbox.root)
-    finally:
+            sandbox.print_log()
         sandbox.close()
 
 
@@ -62,22 +60,6 @@ def pytest_runtest_makereport(
     outcome = yield
     report: pytest.TestReport = outcome.get_result()
     setattr(item, f"rep_{report.when}", report)
-
-
-# ------------------------------------------------------------------------------
-# Internal Utility
-
-def _print_gvc_log(sandbox_root: Path) -> None:
-    log_path = sandbox_root / "log" / "gvc.log"
-    print("\n--- gvc.log (on test failure) begin ---", file=sys.stderr)
-    print(f"path={log_path}", file=sys.stderr)
-    try:
-        print(log_path.read_text(encoding="utf-8", errors="replace"), file=sys.stderr)
-    except FileNotFoundError:
-        print("<gvc.log not found>", file=sys.stderr)
-    except Exception as e:
-        print(f"<failed to read gvc.log: {type(e).__name__}: {e}>", file=sys.stderr)
-    print("--- gvc.log (on test failure) end ---", file=sys.stderr)
 
 
 # ------------------------------------------------------------------------------

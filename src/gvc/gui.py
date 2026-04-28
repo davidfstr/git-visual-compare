@@ -49,7 +49,7 @@ def main() -> None:
     log_filepath = log_dirpath / "gvc.log"
     # NOTE: Replace log whenever process restarts, to prevent growing without bound
     sys.stderr = log_filepath.open("w", buffering=1)
-    print(f"gvc started {dt.datetime.now().isoformat(timespec='seconds')}", file=sys.stderr, flush=True)
+    _log(f"gvc started pid={os.getpid()}")
 
     # Bind the socket FIRST — before importing webview — so that a second
     # concurrent CLI invocation can find the socket as soon as possible.
@@ -60,12 +60,14 @@ def main() -> None:
         # Delete any preexisting Unix socket
         sock_path.unlink(missing_ok=True)
         server_sock.bind(str(sock_path))
+        _log(f"primary socket bound: {sock_path}")
         testmode_close = None
         try:
             server_sock.listen(5)  # maximum backlog of 5 pending connections
 
             # Load heavier GUI dependencies
             import webview  # isort:skip
+            _log("webview imported")
 
             from gvc.app_api import AppApi
             from gvc.prefs import Prefs
@@ -86,6 +88,7 @@ def main() -> None:
             if os.environ.get("GVC_TEST_MODE"):
                 from gvc import testmode
                 testmode_close = testmode.start(api)
+                _log("testmode started")
 
             # Start socket listener thread
             t = threading.Thread(
@@ -105,6 +108,7 @@ def main() -> None:
             from gvc.ipc import GuiRequest
             req = GuiRequest.read_from(request_filepath)
             _open_window(req.title, req.diff_bytes, api)
+            _log("first window created; entering event loop")
 
             # Run the Cocoa event loop, until Cmd+Q or webview.stop() called
             webview.start(func=lambda: _setup_menus_soon(api), private_mode=False)
@@ -431,6 +435,18 @@ def _run_js_in_some_window(api: AppApi, js: str) -> None:
     windows = api.open_windows()
     if windows:
         windows[0].evaluate_js(js)
+
+
+# ------------------------------------------------------------------------------
+# Utility: Logging
+
+def _log(message: str) -> None:
+    """Writes a timestamped progress line to the log (sys.stderr)."""
+    print(
+        f"[{dt.datetime.now().isoformat(timespec='milliseconds')}] {message}",
+        file=sys.stderr,
+        flush=True,
+    )
 
 
 # ------------------------------------------------------------------------------

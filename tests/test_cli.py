@@ -1,7 +1,5 @@
 """Tests that usage of the "gvc" command line utility behaves correctly."""
 
-from contextlib import closing
-
 from harness.app import GvcApp
 from harness.diff_fixture import DiffFixture
 from harness.sandbox import GvcSandbox
@@ -14,16 +12,19 @@ def test_when_gvc_run_in_terminal_given_no_gui_running_then_starts_gui_and_opens
     subtests: pytest.Subtests,
     diff_fixture: DiffFixture,
 ) -> None:
+    # NOTE: On a fresh CI runner, Gatekeeper/Launch Services registration
+    #       of the freshly created bundle plus pyobjc framework imports can take
+    #       >5s before the first window appears.
+    COLD_START_TIMEOUT = 15.0
+    
     with subtests.test(gui_type='source'):
-        with closing(GvcSandbox()) as sandbox, \
-                closing(GvcApp(sandbox)) as app:
-            app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+        with GvcSandbox() as sandbox, GvcApp(sandbox) as app:
+            app.run_cli(diff_fixture.args, cwd=diff_fixture.repo, timeout=COLD_START_TIMEOUT)
             app.wait_for_windows(1)
 
     with subtests.test(gui_type='stub_app'):
-        with closing(GvcSandbox().enable_stub_app()) as sandbox, \
-                closing(GvcApp(sandbox)) as app:
-            app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+        with GvcSandbox().enable_stub_app() as sandbox, GvcApp(sandbox) as app:
+            app.run_cli(diff_fixture.args, cwd=diff_fixture.repo, timeout=COLD_START_TIMEOUT)
             app.wait_for_windows(1)
 
     with subtests.test(gui_type='bundled_app'):

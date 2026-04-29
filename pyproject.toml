@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "gvc"
-version = "1.0.0"
+version = "1.1.0"
 description = "Git Visual Compare — a GUI diff viewer driven from the command line"
 requires-python = ">=3.14"
 dependencies = [

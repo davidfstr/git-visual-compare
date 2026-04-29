@@ -1,7 +1,7 @@
 Release Notes
 -------------
 
-### main
+### v1.1.0 (April 28, 2026)
 
 * Usability improvements
     * App has stable bundle identity that can be targeted with automation tools 

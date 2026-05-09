@@ -1,4 +1,4 @@
-# Project Guidelines
+**gvc** (git-visual-compare) is a lightweight macOS GUI for viewing `git diff` output.
 
 ## Code Style
 

@@ -69,3 +69,70 @@ This project uses [Beads](https://gastownhall.github.io/beads/) (`bd`) for issue
 
 The use of Beads is currently being experimented with, so I do not want to commit any of its
 integration hooks to git at this time.
+
+# Beads-GitHub Integration
+
+`bd` can pull issues from GitHub into the local Beads database via `bd github pull`.
+
+## Configuration
+
+Two settings must be correct before pulling works. They are stored in the Beads database
+(not in `config.yaml`), so set them with `bd config set`:
+
+```bash
+bd config set github.org "davidfstr"            # GitHub owner — just the username
+bd config set github.repo "git-visual-compare"  # bare repo name only, NOT "owner/repo"
+```
+
+> **Gotcha:** setting `github.repo` to `"davidfstr/git-visual-compare"` (the full path) causes
+> a 404 from the GitHub API. Use the bare name only.
+
+The GitHub token must be supplied as an environment variable — the `github.token` key in
+`config.yaml` is not reliably picked up by `bd github` commands:
+
+```bash
+export GITHUB_TOKEN="<your-personal-access-token>"
+```
+
+A fine-grained Personal Access Token with **Issues: read/write** access to the repository is sufficient.
+
+Verify the resolved configuration:
+
+```bash
+bd github status
+# GitHub Configuration
+# ====================
+# Token:      gith****
+# Owner:      davidfstr
+# Repository: git-visual-compare
+#
+# Status: ✓ Configured
+```
+
+## Pulling a specific GitHub issue
+
+Use `bd github pull <issue-number>`. Pass `--dry-run` first to preview:
+
+```bash
+bd github pull 4 --dry-run
+#   [dry-run] Would import: 4 - Select and copy diff captures line numbers improperly
+# Dry run mode - no changes will be made
+# ✓ Pulled 1 issues (1 created, 0 updated)
+
+bd github pull 4
+# ✓ Pulled 1 issues (1 created, 0 updated)
+```
+
+## Viewing the resulting bead
+
+```bash
+bd list
+# ○ git-visual-compare-1778368328795-1-c0714ed6 ● P2 [bug] Select and copy diff captures line numbers improperly
+```
+
+```bash
+bd show git-visual-compare-1778368328795-1-c0714ed6
+```
+
+The bead title, labels (e.g. `bug`), and body are imported from GitHub. The bead ID is local
+to the Beads database and does not correspond to the GitHub issue number.

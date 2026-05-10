@@ -1,4 +1,4 @@
-name: CI
+name: "Continuous Integration"
 
 on:
   push:
@@ -6,14 +6,29 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Disallow all GITHUB_TOKEN permissions by default
+permissions: {}
+
+# Only allow 1 concurrent set of CI jobs per PR or branch name. Cancel any others.
+# Why:
+# - https://cambridge-iccs.github.io/green-ci/best_practices.html#concurrency
+# - https://docs.zizmor.sh/audits/#concurrency-limits
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    name: "Test"
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: "3.14"
 
@@ -25,7 +40,7 @@ jobs:
 
       - name: Cache virtualenv
         id: cache-venv
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5
         with:
           path: .venv
           key: venv-${{ runner.os }}-py3.14-${{ hashFiles('poetry.lock') }}

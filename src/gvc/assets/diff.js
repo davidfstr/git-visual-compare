@@ -33,6 +33,9 @@ document.addEventListener("DOMContentLoaded", () => {
     _setupFindBar();
     _setupCopy();
     _setupOutlineLinks();
+    
+    // Setup listeners on diff content
+    _setupWhenSectionCollapseThenScrollBackIntoView(document);
 });
 
 // -------------------------------------------------------
@@ -135,6 +138,17 @@ function setAllSections(/** @type {boolean} */ open) {
     document.querySelectorAll("details.file-section").forEach((d) => {
         if (!(d instanceof HTMLDetailsElement)) { throw new Error('Expected <details> element') }
         d.open = open;
+    });
+}
+
+function _setupWhenSectionCollapseThenScrollBackIntoView(/** @type {Document | Element} */ root) {
+    root.querySelectorAll("details.file-section").forEach((d) => {
+        if (!(d instanceof HTMLDetailsElement)) return;
+        d.addEventListener("toggle", () => {
+            if (!d.open) {
+                d.querySelector("summary")?.scrollIntoView({ block: "nearest" });
+            }
+        });
     });
 }
 
@@ -456,6 +470,9 @@ function revealFullDiff() {
     content.innerHTML = "";
     if (!(full instanceof HTMLTemplateElement)) { throw new Error("full-diff-hidden is not a <template>"); }
     content.appendChild(full.content.cloneNode(true));
+    
+    // Setup listeners on diff content
+    _setupWhenSectionCollapseThenScrollBackIntoView(content);
 }
 
 // -------------------------------------------------------

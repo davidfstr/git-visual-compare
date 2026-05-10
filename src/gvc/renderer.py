@@ -78,7 +78,8 @@ def _render_outline(file_diffs: list["FileDiff"]) -> str:
         file_path_e = _e(file_path)
         parts.append(
             f'<a class="outline-file" href="#file-{idx}" title="{status_label}: {file_path_e}">'
-            f'<span class="outline-status">{status_icon}</span>{file_path_e}</a>'
+                f'<span class="outline-status">{status_icon}</span>{file_path_e}'
+            f'</a>'
         )
     return "\n".join(parts)
 
@@ -116,8 +117,11 @@ def _render_file(fd: FileDiff, idx: int) -> str:
     parts.append(
         f'<details class="file-section" id="file-{idx}" open>'
         f'<summary>'
-        f'<span class="file-status-icon" title="{status_label}">{status_icon}</span>'
-        f'<span class="file-path">{file_path_e}</span>'
+            f'<span class="file-status-icon" title="{status_label}">{status_icon}</span>'
+            f'<span class="file-path">{file_path_e}</span>'
+            f'<label class="reviewed-label" onclick="onReviewedLabelClick(event, {idx})">'
+                f'<input type="checkbox" class="reviewed-check" data-file-idx="{idx}"> Reviewed'
+            f'</label>'
         f'</summary>'
     )
 

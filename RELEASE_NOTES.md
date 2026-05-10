@@ -1,6 +1,16 @@
 Release Notes
 -------------
 
+### main
+
+* Code review tools
+    * File section headers now have a "[ ] Reviewed" checkbox.
+      Checking it collapses the section; unchecking it expands the section.
+
+* Usability improvements
+    * Collapsing a file section (via its header or the Reviewed checkbox) now
+      attempts to keep the section header in view.
+
 ### v1.2.0 (May 10, 2026)
 
 * Usability improvements

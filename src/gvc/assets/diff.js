@@ -33,6 +33,9 @@ document.addEventListener("DOMContentLoaded", () => {
     _setupFindBar();
     _setupCopy();
     _setupOutlineLinks();
+    
+    // Setup listeners on diff content
+    _setupWhenSectionCollapseThenScrollBackIntoView(document);
 });
 
 // -------------------------------------------------------
@@ -107,12 +110,45 @@ async function changeFontSize(/** @type {number} */ delta) {
 }
 
 // -------------------------------------------------------
+// Reviewed Checkboxes
+
+function onReviewedLabelClick(/** @type {MouseEvent} */ e, /** @type {number} */ fileIdx) {
+    e.stopPropagation();  // prevent <details> toggle when inside <summary>
+
+    let checked;
+    if (e.target instanceof HTMLInputElement) {
+        // Checkbox itself was clicked
+        checked = e.target.checked;
+    } else {
+        // Checkbox label was clicked
+        const label = /** @type {Element} */(e.currentTarget);
+        const cb = /** @type {HTMLInputElement} */(label.querySelector(".reviewed-check"));
+        checked = cb.checked;
+    }
+
+    // Auto-collapse when reviewed. Auto-expand when unreviewed.
+    const section = /** @type {HTMLDetailsElement} */(document.getElementById(`file-${fileIdx}`));
+    section.open = !checked;
+}
+
+// -------------------------------------------------------
 // Collapse / Expand All
 
 function setAllSections(/** @type {boolean} */ open) {
     document.querySelectorAll("details.file-section").forEach((d) => {
         if (!(d instanceof HTMLDetailsElement)) { throw new Error('Expected <details> element') }
         d.open = open;
+    });
+}
+
+function _setupWhenSectionCollapseThenScrollBackIntoView(/** @type {Document | Element} */ root) {
+    root.querySelectorAll("details.file-section").forEach((d) => {
+        if (!(d instanceof HTMLDetailsElement)) return;
+        d.addEventListener("toggle", () => {
+            if (!d.open) {
+                d.querySelector("summary")?.scrollIntoView({ block: "nearest" });
+            }
+        });
     });
 }
 
@@ -434,6 +470,9 @@ function revealFullDiff() {
     content.innerHTML = "";
     if (!(full instanceof HTMLTemplateElement)) { throw new Error("full-diff-hidden is not a <template>"); }
     content.appendChild(full.content.cloneNode(true));
+    
+    // Setup listeners on diff content
+    _setupWhenSectionCollapseThenScrollBackIntoView(content);
 }
 
 // -------------------------------------------------------

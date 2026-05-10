@@ -17,9 +17,10 @@ import sys
 import threading
 import time
 import traceback
-from typing import TYPE_CHECKING, cast
+from typing import cast, TYPE_CHECKING
 import webview
 from webview.platforms.cocoa import BrowserView
+
 
 if TYPE_CHECKING:
     from gvc.app_api import AppApi

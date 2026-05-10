@@ -5,6 +5,7 @@ from Foundation import NSUserDefaults
 from typing import TYPE_CHECKING
 import webview
 
+
 if TYPE_CHECKING:
     from gvc.app_api import AppApi
 

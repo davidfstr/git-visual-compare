@@ -24,6 +24,7 @@ import threading
 import traceback
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from gvc.app_api import AppApi
 
@@ -231,7 +232,7 @@ def _define_about_panel() -> None:
     """
     import AppKit
     from Foundation import NSObject
-    
+
     # Create about panel handler
     global _about_panel_handler
     class AboutPanelHandler(NSObject):

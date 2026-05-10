@@ -232,37 +232,43 @@ def test_given_diff_window_then_reviewed_checkbox_visible_in_section_header(
     expect(summary_checks).to_have_count(len(EXPECTED_FILES))
 
 
-def test_when_reviewed_checkbox_checked_then_section_collapses(
-    gvc_app: GvcApp,
-    diff_fixture: DiffFixture,
-) -> None:
-    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
-    page = gvc_app.page(window)
-    section = page.locator("#file-0")
-    expect(section).to_have_attribute("open", "")
-
-    summary_check = page.locator("#file-0 > summary .reviewed-check")
-    summary_check.evaluate("el => el.click()")
-
-    expect(section).not_to_have_attribute("open")
+@pytest.mark.skip('covered by: test_when_reviewed_checkbox_unchecked_then_section_expands')
+def test_when_reviewed_checkbox_checked_then_section_collapses() -> None:
+    pass
 
 
 def test_when_reviewed_checkbox_unchecked_then_section_expands(
+    subtests: pytest.Subtests,
     gvc_app: GvcApp,
     diff_fixture: DiffFixture,
 ) -> None:
-    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
-    page = gvc_app.page(window)
-    summary_check = page.locator("#file-0 > summary .reviewed-check")
-    section = page.locator("#file-0")
+    # Click the checkbox element itself
+    with subtests.test(click_target="checkbox"):
+        window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+        page = gvc_app.page(window)
+        section = page.locator("#file-0")
 
-    # Check (collapses)
-    summary_check.evaluate("el => el.click()")
-    expect(section).not_to_have_attribute("open")
+        # Check (collapses)
+        page.locator("#file-0 > summary .reviewed-check").evaluate("el => el.click()")
+        expect(section).not_to_have_attribute("open")
 
-    # Uncheck (expands)
-    summary_check.evaluate("el => el.click()")
-    expect(section).to_have_attribute("open", "")
+        # Uncheck (expands)
+        page.locator("#file-0 > summary .reviewed-check").evaluate("el => el.click()")
+        expect(section).to_have_attribute("open", "")
+
+    # Click the label element itself (outside the checkbox)
+    with subtests.test(click_target="label"):
+        window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+        page = gvc_app.page(window)
+        section = page.locator("#file-0")
+
+        # Check (collapses)
+        page.locator("#file-0 > summary .reviewed-label").evaluate("el => el.click()")
+        expect(section).not_to_have_attribute("open")
+
+        # Uncheck (expands)
+        page.locator("#file-0 > summary .reviewed-label").evaluate("el => el.click()")
+        expect(section).to_have_attribute("open", "")
 
 
 # === Test: Git Diff Appearance ===

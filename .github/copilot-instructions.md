@@ -42,7 +42,13 @@ poetry install
 poetry run gvc [git-diff-args...]
 ```
 
-No automated test suite yet.
+```bash
+# Run all tests
+poetry run pytest
+
+# Run tests in parallel (faster)
+poetry run pytest -n auto || poetry run pytest --last-failed
+```
 
 ## Typecheck
 

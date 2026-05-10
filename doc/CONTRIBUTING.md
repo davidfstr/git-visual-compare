@@ -17,7 +17,11 @@ pipx install -e .
 ### Running Tests
 
 ```bash
-pytest
+# Run all tests
+poetry run pytest
+
+# Run tests in parallel (faster)
+poetry run pytest -n auto || poetry run pytest --last-failed
 ```
 
 ### Type Checking Python

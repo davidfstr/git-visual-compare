@@ -310,6 +310,11 @@ td.ln-old, td.ln-new {
   vertical-align: top;
 }
 
+/* Render line numbers via pseudo-elements so they are excluded from
+   text selection and clipboard copies. */
+td.ln-old::before { content: attr(data-ln); }
+td.ln-new::before { content: attr(data-ln); }
+
 /* Content column */
 td.content {
   padding: 0 8px;
@@ -326,7 +331,6 @@ tr.line-removed td.content { background: var(--removed-bg); }
 .line-marker {
   display: inline-block;
   width: 1.2ch;
-  user-select: none;
   font-weight: 600;
 }
 

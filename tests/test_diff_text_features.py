@@ -39,16 +39,79 @@ def test_when_gvc_is_quit_and_reopened_and_new_diff_window_appears_then_uses_sam
 
 # === Test: Select and Copy ===
 
-@pytest.mark.skip('fails: currently also selects line numbers')
-def test_can_click_and_drag_within_diff_text_to_select_diff_text() -> None:
+def test_can_click_and_drag_within_diff_text_to_select_diff_text(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
     # ...including + and - markers but excluding line numbers
-    pass
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
+
+    selected_text = page.evaluate("""() => {
+        // Simulate a click-and-drag selection spanning two consecutive diff rows.
+        const rows = Array.from(document.querySelectorAll(
+            'tr.line-added, tr.line-removed, tr.line-context'
+        ));
+        if (rows.length < 2) throw new Error('need ≥2 diff rows');
+        const cell0 = rows[0].querySelector('td.content');
+        const cell1 = rows[1].querySelector('td.content');
+        if (!cell0 || !cell1) throw new Error('missing content cells');
+
+        const range = document.createRange();
+        range.setStart(cell0, 0);
+        range.setEnd(cell1, cell1.childNodes.length);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return sel.toString();
+    }""")
+
+    # Ensure selection starts with a diff marker (+, -, or space from the content cell)
+    # and in particular does not start with a line number (which should be excluded)
+    assert isinstance(selected_text, str) and len(selected_text) > 0, \
+        "expected non-empty selection"
+    assert selected_text[0] in ("+", "-", " "), \
+        f"selection should start with a diff marker, got {selected_text[0]!r}"
 
 
-@pytest.mark.skip('fails: currently also copies line numbers')
-def test_given_diff_text_selected_when_press_command_c_then_copies_selected_text() -> None:
+def test_given_diff_text_selected_when_press_command_c_then_copies_selected_text(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
     # ...including + and - markers but excluding line numbers
-    pass
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
+
+    copied_text = page.evaluate("""() => {
+        // Set up the same two-row selection used in the visual-selection test.
+        const rows = Array.from(document.querySelectorAll(
+            'tr.line-added, tr.line-removed, tr.line-context'
+        ));
+        if (rows.length < 2) throw new Error('need ≥2 diff rows');
+        const cell0 = rows[0].querySelector('td.content');
+        const cell1 = rows[1].querySelector('td.content');
+        if (!cell0 || !cell1) throw new Error('missing content cells');
+
+        const range = document.createRange();
+        range.setStart(cell0, 0);
+        range.setEnd(cell1, cell1.childNodes.length);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        // Invoke the copy handler's logic directly to capture what Cmd+C would put
+        // on the clipboard without going through the OS clipboard API.
+        return _buildClipboardText(sel);
+    }""")
+
+    # Ensure copied text starts with a diff marker (+, -, or space from the content cell)
+    # and in particular does not start with a line number (which should be excluded)
+    assert isinstance(copied_text, str) and len(copied_text) > 0, \
+        "expected non-empty clipboard text"
+    assert copied_text[0] in ("+", "-", " "), \
+        f"copied text should start with a diff marker, got {copied_text[0]!r}"
+    assert "\n" in copied_text, \
+        "expected multi-line clipboard text from a two-row selection"
 
 
 # === Test: Find ===

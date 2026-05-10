@@ -31,6 +31,7 @@ window.addEventListener("pywebviewready", async () => {
 document.addEventListener("DOMContentLoaded", () => {
     _setupKeyboard();
     _setupFindBar();
+    _setupCopy();
 });
 
 // -------------------------------------------------------
@@ -365,6 +366,39 @@ function _flashWrapOverlay() {
         overlay.classList.remove("visible");
         _wrapTimer = null;
     }, 800);
+}
+
+// -------------------------------------------------------
+// Copy
+
+function _setupCopy() {
+    document.addEventListener("copy", (e) => {
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed) return;
+        if (!e.clipboardData) return;
+
+        const text = _buildClipboardText(selection);
+        if (text === null) return;
+
+        e.preventDefault();
+        e.clipboardData.setData("text/plain", text);
+    });
+}
+
+function _buildClipboardText(/** @type {Selection} */ selection) {
+    if (!selection.rangeCount) return null;
+
+    const range = selection.getRangeAt(0);
+    const fragment = range.cloneContents();
+
+    const rows = Array.from(fragment.querySelectorAll("tr"));
+    if (rows.length > 0) {
+        // Multi-row selection: join each row's text with newlines.
+        return rows.map(row => row.textContent ?? "").join("\n");
+    }
+
+    // Single-cell or non-table selection: return fragment text directly.
+    return fragment.textContent;
 }
 
 // -------------------------------------------------------

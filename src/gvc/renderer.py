@@ -130,8 +130,8 @@ def _render_file(fd: FileDiff, idx: int) -> str:
             # Hunk seam row
             parts.append(
                 '<tr class="line-hunk">'
-                '<td class="ln-old"></td>'
-                '<td class="ln-new"></td>'
+                '<td class="ln-old" data-ln=""></td>'
+                '<td class="ln-new" data-ln=""></td>'
                 f'<td class="content"><span class="line-marker"> </span>{_e(hunk.header)}</td>'
                 '</tr>'
             )
@@ -148,8 +148,8 @@ def _render_file(fd: FileDiff, idx: int) -> str:
                 elif line.kind == "noeol":
                     parts.append(
                         '<tr class="line-noeol">'
-                        '<td class="ln-old"></td>'
-                        '<td class="ln-new"></td>'
+                        '<td class="ln-old" data-ln=""></td>'
+                        '<td class="ln-new" data-ln=""></td>'
                         f'<td class="content"><span class="line-marker"> </span>{_e(line.text)}</td>'
                         '</tr>'
                     )
@@ -160,8 +160,8 @@ def _render_file(fd: FileDiff, idx: int) -> str:
                 content_html = _render_content(line.text, line.trailing_ws)
                 parts.append(
                     f'<tr class="{row_class}">'
-                    f'<td class="ln-old">{_lineno(line.old_lineno)}</td>'
-                    f'<td class="ln-new">{_lineno(line.new_lineno)}</td>'
+                    f'<td class="ln-old" data-ln="{_lineno(line.old_lineno)}"></td>'
+                    f'<td class="ln-new" data-ln="{_lineno(line.new_lineno)}"></td>'
                     f'<td class="content"><span class="line-marker">{marker}</span>{content_html}</td>'
                     '</tr>'
                 )

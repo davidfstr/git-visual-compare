@@ -107,6 +107,34 @@ async function changeFontSize(/** @type {number} */ delta) {
 }
 
 // -------------------------------------------------------
+// Reviewed Checkboxes
+
+function onReviewedLabelClick(/** @type {MouseEvent} */ e, /** @type {number} */ fileIdx) {
+    e.stopPropagation();  // prevent <details> toggle when inside <summary>
+
+    let checked;
+    if (e.target instanceof HTMLInputElement) {
+        // Checkbox itself was clicked
+        checked = e.target.checked;
+    } else {
+        // Checkbox label was clicked
+        const label = /** @type {Element} */(e.currentTarget);
+        const cb = /** @type {HTMLInputElement} */(label.querySelector(".reviewed-check"));
+        checked = cb.checked;
+    }
+
+    // Sync TOC + summary checkboxes for this file
+    document.querySelectorAll(`.reviewed-check[data-file-idx="${fileIdx}"]`).forEach(el => {
+        if (!(el instanceof HTMLInputElement)) { throw new Error(''); }
+        el.checked = checked;
+    });
+
+    // Auto-collapse when reviewed. Auto-expand when unreviewed.
+    const section = /** @type {HTMLDetailsElement} */(document.getElementById(`file-${fileIdx}`));
+    section.open = !checked;
+}
+
+// -------------------------------------------------------
 // Collapse / Expand All
 
 function setAllSections(/** @type {boolean} */ open) {

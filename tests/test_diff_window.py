@@ -160,6 +160,26 @@ def test_when_file_in_toc_clicked_then_scrolls_diff_of_file_into_view(
     expect(target).to_be_in_viewport()
 
 
+def test_when_file_in_toc_clicked_given_file_section_collapsed_then_section_expands(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
+
+    section = page.locator("#file-0")
+    expect(section).to_have_attribute("open", "")
+
+    # Collapse the file section
+    section.locator("summary").click()
+    expect(section).not_to_have_attribute("open")
+
+    # Click its TOC entry. Should expand the section.
+    first_entry = page.locator("#file-outline .outline-file").first
+    first_entry.click()
+    expect(section).to_have_attribute("open", "")
+
+
 # === Test: Collapsible File Sections ===
 
 @pytest.mark.skip('not yet automated')

@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
     _setupKeyboard();
     _setupFindBar();
     _setupCopy();
+    _setupOutlineLinks();
 });
 
 // -------------------------------------------------------
@@ -112,6 +113,24 @@ function setAllSections(/** @type {boolean} */ open) {
     document.querySelectorAll("details.file-section").forEach((d) => {
         if (!(d instanceof HTMLDetailsElement)) { throw new Error('Expected <details> element') }
         d.open = open;
+    });
+}
+
+// -------------------------------------------------------
+// Outline Navigation
+
+function _setupOutlineLinks() {
+    const outline = document.getElementById("file-outline");
+    if (!outline) return;
+    outline.addEventListener("click", (e) => {
+        const link = (e.target instanceof Element) ? e.target.closest(".outline-file") : null;
+        if (!link) return;
+        const href = link.getAttribute("href");
+        if (!href || !href.startsWith("#")) return;
+        const target = document.getElementById(href.slice(1));
+        if (target instanceof HTMLDetailsElement && !target.open) {
+            target.open = true;
+        }
     });
 }
 

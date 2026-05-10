@@ -1,6 +1,20 @@
 Release Notes
 -------------
 
+### main
+
+* Usability improvements
+    * Selecting text in a diff to copy no longer includes line numbers
+    * Clicking a file in the Table of Contents now expands its content if
+      collapsed
+    * "Wrap Around" overlay shown when Find wraps is now more readable,
+      with a rounded rectangle background and a larger ⟳ icon
+    * Empty file additions and deletions now show "Empty file" rather than
+      "No changes". Renames without content changes still show "No changes".
+
+* Development improvements
+    * Tests can now be run in parallel
+
 ### v1.1.0 (April 28, 2026)
 
 * Usability improvements

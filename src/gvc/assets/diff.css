@@ -35,6 +35,8 @@
 
   --font-size:         13px;
   --font-family:       ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --wrap-overlay-bg:   #b4bcc4;
 }
 
 /* Dark mode */
@@ -69,6 +71,8 @@
     --find-toggle-active-fg: #ffffff;
 
     --summary-triangle:  #8b949e;
+
+    --wrap-overlay-bg:   #2c3440;
   }
 }
 
@@ -377,12 +381,28 @@ mark.find-current {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 72px;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  width: 160px;
+  height: 160px;
+  border-radius: 20px;
+  background: var(--wrap-overlay-bg);
+  
+  font-size: 165px;  /* icon size */
+  line-height: 1;
+  padding-bottom: 0.2em;  /* adjust position, to center vertically */
+  padding-left: 0.1em;  /* adjust position, to center horizontally */
+  
   pointer-events: none;
+  user-select: none;
+  
   opacity: 0;
   transition: opacity 0.15s ease;
+  
   z-index: 9999;
-  user-select: none;
 }
 
 #wrap-overlay.visible {

@@ -21,11 +21,11 @@ class Locator:
 
     # === Chaining ===
 
-    def locator(self, selector: str) -> Locator:
-        return Locator(
-            self._page,
-            self._chain + [{"op": "locator", "selector": selector}],
-        )
+    def locator(self, selector: str, *, has_text: str | None = None) -> Locator:
+        chain = self._chain + [{"op": "locator", "selector": selector}]
+        if has_text is not None:
+            chain = chain + [{"op": "hasText", "text": has_text}]
+        return Locator(self._page, chain)
 
     def nth(self, index: int) -> Locator:
         return Locator(

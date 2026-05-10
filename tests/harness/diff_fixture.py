@@ -100,3 +100,35 @@ def make_large_diff_fixture() -> DiffFixture:
     run("git", "commit", "--quiet", "--message", "add big file")
 
     return DiffFixture(repo=repo, args=["HEAD~1", "HEAD"])
+
+
+def make_empty_file_diff_fixture() -> DiffFixture:
+    """
+    Creates a temp git repo whose HEAD~1..HEAD diff has two empty files:
+    one deleted (status="deleted", no hunks) and one added (status="added", no hunks).
+    """
+    repo = Path(tempfile.mkdtemp(prefix="gvc-empty-file-fixture-"))
+
+    def run(*cmd: str) -> None:
+        subprocess.run(cmd, cwd=repo, check=True, capture_output=True)
+
+    run("git", "init", "--quiet", "--initial-branch=main")
+    run("git", "config", "user.email", "test@example.com")
+    run("git", "config", "user.name", "Test")
+
+    # Commit 1: a placeholder file plus an empty file that will be deleted
+    (repo / "placeholder.py").write_text("placeholder\n")
+    (repo / "empty_deleted.py").write_text("")
+    run("git", "add", "--all")
+    run("git", "commit", "--quiet", "--message", "initial")
+
+    # Commit 2: delete the empty file and add a new empty file
+    (repo / "empty_deleted.py").unlink()
+    (repo / "empty_added.py").write_text("")
+    run("git", "add", "--all")
+    run("git", "commit", "--quiet", "--message", "swap empty files")
+
+    # NOTE: --no-renames overrides the --find-renames that gvc always adds.
+    #       Without it, git would detect the two empty files as a rename 
+    #       (100% similar content).
+    return DiffFixture(repo=repo, args=["--no-renames", "HEAD~1", "HEAD"])

@@ -17,8 +17,11 @@ class Page:
 
     # === Locators ===
 
-    def locator(self, selector: str) -> Locator:
-        return Locator(self, [{"op": "locator", "selector": selector}])
+    def locator(self, selector: str, *, has_text: str | None = None) -> Locator:
+        chain: list[dict[str, object]] = [{"op": "locator", "selector": selector}]
+        if has_text is not None:
+            chain = chain + [{"op": "hasText", "text": has_text}]
+        return Locator(self, chain)
 
     # === Actions ===
 

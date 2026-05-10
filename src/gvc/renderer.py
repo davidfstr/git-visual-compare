@@ -123,7 +123,8 @@ def _render_file(fd: FileDiff, idx: int) -> str:
     if fd.status == "binary":
         parts.append('<p style="padding:6px 12px;color:var(--hunk-fg)">Binary file differs</p>')
     elif not fd.hunks:
-        parts.append('<p style="padding:6px 12px;color:var(--hunk-fg)">No changes</p>')
+        msg = "Empty file" if fd.status in ("added", "deleted") else "No changes"
+        parts.append(f'<p style="padding:6px 12px;color:var(--hunk-fg)">{msg}</p>')
     else:
         parts.append('<table class="diff-table"><tbody>')
         for hunk in fd.hunks:

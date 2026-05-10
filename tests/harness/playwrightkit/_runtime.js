@@ -24,6 +24,10 @@
                     } else if (op.op === 'nth') {
                         var idx = op.index < 0 ? current.length + op.index : op.index;
                         current = (idx >= 0 && idx < current.length) ? [current[idx]] : [];
+                    } else if (op.op === 'hasText') {
+                        current = current.filter(function(el) {
+                            return (el.textContent || '').includes(op.text);
+                        });
                     } else {
                         throw new Error('unknown chain op: ' + op.op);
                     }

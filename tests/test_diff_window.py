@@ -6,7 +6,7 @@ visible controls have the expected behavior.
 from contextlib import closing
 from gvc import window_manager
 from harness.app import GvcApp
-from harness.diff_fixture import DiffFixture, EXPECTED_FILES, make_large_diff_fixture
+from harness.diff_fixture import DiffFixture, EXPECTED_FILES, make_empty_file_diff_fixture, make_large_diff_fixture
 from harness.playwrightkit import Page, expect
 import pytest
 import time
@@ -241,3 +241,27 @@ def test_when_confirm_show_large_diff_then_diff_is_displayed(
 
         expect(page.locator("#file-0")).to_be_visible()
         expect(gate).not_to_be_visible()
+
+
+# === Test: Empty Diffs ===
+
+def test_given_empty_file_added_or_removed_then_shows_empty_file_message(
+    gvc_app: GvcApp,
+) -> None:
+    with closing(make_empty_file_diff_fixture()) as fixture:
+        window = gvc_app.run_cli(fixture.args, cwd=fixture.repo)
+        page = gvc_app.page(window)
+        content = page.locator("#diff-content")
+        expect(content).to_contain_text("Empty file")
+        expect(content).not_to_contain_text("No changes")
+
+
+def test_given_renamed_file_with_no_content_change_then_shows_no_changes_message(
+    gvc_app: GvcApp,
+    diff_fixture: DiffFixture,
+) -> None:
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
+    renamed_section = page.locator("details.file-section", has_text="renamed_new.py")
+    expect(renamed_section).to_contain_text("No changes")
+    expect(renamed_section).not_to_contain_text("Empty file")

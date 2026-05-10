@@ -1,7 +1,7 @@
 Release Notes
 -------------
 
-### main
+### v1.2.0 (May 10, 2026)
 
 * Usability improvements
     * Selecting text in a diff to copy no longer includes line numbers

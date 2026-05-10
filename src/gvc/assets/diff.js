@@ -123,12 +123,6 @@ function onReviewedLabelClick(/** @type {MouseEvent} */ e, /** @type {number} */
         checked = cb.checked;
     }
 
-    // Sync TOC + summary checkboxes for this file
-    document.querySelectorAll(`.reviewed-check[data-file-idx="${fileIdx}"]`).forEach(el => {
-        if (!(el instanceof HTMLInputElement)) { throw new Error(''); }
-        el.checked = checked;
-    });
-
     // Auto-collapse when reviewed. Auto-expand when unreviewed.
     const section = /** @type {HTMLDetailsElement} */(document.getElementById(`file-${fileIdx}`));
     section.open = !checked;

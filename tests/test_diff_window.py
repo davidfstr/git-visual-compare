@@ -220,95 +220,49 @@ def test_when_header_of_file_section_clicked_given_section_collapsed_then_sectio
 
 # === Test: Reviewed Checkboxes ===
 
-def test_given_diff_window_then_reviewed_checkbox_visible_in_toc_and_section_header(
+def test_given_diff_window_then_reviewed_checkbox_visible_in_section_header(
     gvc_app: GvcApp,
     diff_fixture: DiffFixture,
 ) -> None:
     window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
     page = gvc_app.page(window)
 
-    # Every TOC row has a checkbox
-    toc_checks = page.locator("#file-outline .reviewed-check")
-    expect(toc_checks).to_have_count(len(EXPECTED_FILES))
-
     # Every file section summary has a checkbox
     summary_checks = page.locator("details.file-section > summary .reviewed-check")
     expect(summary_checks).to_have_count(len(EXPECTED_FILES))
 
 
-def test_when_reviewed_checkbox_checked_then_section_collapses_and_other_checkbox_synced(
-    subtests: pytest.Subtests,
+def test_when_reviewed_checkbox_checked_then_section_collapses(
     gvc_app: GvcApp,
     diff_fixture: DiffFixture,
 ) -> None:
-    with subtests.test(location="toc"):
-        window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
-        page = gvc_app.page(window)
-        section = page.locator("#file-0")
-        expect(section).to_have_attribute("open", "")
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
+    section = page.locator("#file-0")
+    expect(section).to_have_attribute("open", "")
 
-        # Check the TOC checkbox for file 0
-        toc_check = page.locator("#file-outline .reviewed-check[data-file-idx='0']")
-        toc_check.evaluate("el => el.click()")
+    summary_check = page.locator("#file-0 > summary .reviewed-check")
+    summary_check.evaluate("el => el.click()")
 
-        # Section collapses
-        expect(section).not_to_have_attribute("open")
-        # Summary checkbox is also checked
-        summary_check = page.locator("#file-0 > summary .reviewed-check")
-        assert summary_check.evaluate("el => el.checked") is True
-
-    with subtests.test(location="section_header"):
-        window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
-        page = gvc_app.page(window)
-        section = page.locator("#file-0")
-        expect(section).to_have_attribute("open", "")
-
-        # Check the summary checkbox for file 0
-        summary_check = page.locator("#file-0 > summary .reviewed-check")
-        summary_check.evaluate("el => el.click()")
-
-        # Section collapses
-        expect(section).not_to_have_attribute("open")
-        # TOC checkbox is also checked
-        toc_check = page.locator("#file-outline .reviewed-check[data-file-idx='0']")
-        assert toc_check.evaluate("el => el.checked") is True
+    expect(section).not_to_have_attribute("open")
 
 
-def test_when_reviewed_checkbox_unchecked_then_section_expands_and_other_checkbox_synced(
-    subtests: pytest.Subtests,
+def test_when_reviewed_checkbox_unchecked_then_section_expands(
     gvc_app: GvcApp,
     diff_fixture: DiffFixture,
 ) -> None:
-    with subtests.test(location="toc"):
-        window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
-        page = gvc_app.page(window)
-        toc_check = page.locator("#file-outline .reviewed-check[data-file-idx='0']")
-        section = page.locator("#file-0")
-        
-        # Check (collapses)
-        toc_check.evaluate("el => el.click()")
-        expect(section).not_to_have_attribute("open")
+    window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+    page = gvc_app.page(window)
+    summary_check = page.locator("#file-0 > summary .reviewed-check")
+    section = page.locator("#file-0")
 
-        # Uncheck (expands)
-        toc_check.evaluate("el => el.click()")
-        expect(section).to_have_attribute("open", "")
-    
-    with subtests.test(location="section_header"):
-        window = gvc_app.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
-        page = gvc_app.page(window)
-        summary_check = page.locator("#file-0 > summary .reviewed-check")
-        section = page.locator("#file-0")
+    # Check (collapses)
+    summary_check.evaluate("el => el.click()")
+    expect(section).not_to_have_attribute("open")
 
-        # Check (collapses)
-        summary_check.evaluate("el => el.click()")
-        expect(section).not_to_have_attribute("open")
-
-        # Uncheck (expands)
-        summary_check.evaluate("el => el.click()")
-        expect(section).to_have_attribute("open", "")
-        # TOC checkbox is also unchecked
-        toc_check = page.locator("#file-outline .reviewed-check[data-file-idx='0']")
-        assert toc_check.evaluate("el => el.checked") is False
+    # Uncheck (expands)
+    summary_check.evaluate("el => el.click()")
+    expect(section).to_have_attribute("open", "")
 
 
 # === Test: Git Diff Appearance ===

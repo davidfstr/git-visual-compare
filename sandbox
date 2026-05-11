@@ -98,7 +98,12 @@ cat > "$SBPL" << SBPL
 (allow file-read* (subpath "/private/var"))
 (allow file-read* (subpath "/tmp"))
 (allow file-read* (subpath "/var"))
-(allow file-read* (subpath "/System"))
+(allow file-read-metadata (literal "/System"))    ; stat /System itself (dyld startup)
+(allow file-read* (subpath "/System/Cryptexes"))
+(allow file-read* (subpath "/System/Library"))
+(allow file-read-metadata (literal "/System/Volumes"))  ; stat /System/Volumes itself
+(allow file-read* (subpath "/System/Volumes/Data"))
+(allow file-read* (subpath "/System/Volumes/Preboot"))
 (allow file-read-metadata (literal "/usr"))   ; directory stat
 (allow file-read* (subpath "/usr/bin"))       ; git, python symlinks, etc.
 (allow file-read* (subpath "/usr/lib"))       ; system dylibs

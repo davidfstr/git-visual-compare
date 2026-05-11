@@ -118,7 +118,7 @@ cat > "$SBPL" << SBPL
 (allow file-read* (subpath "/usr/lib"))       ; system dylibs
 (allow file-read* (subpath "/usr/libexec"))   ; helper/XPC processes
 (allow file-read* (subpath "/usr/share"))     ; locale, timezone, terminfo
-(allow file-read* (literal "/Library"))
+(allow file-read-metadata (literal "/Library"))
 (allow file-read-metadata (literal "/Library/Developer"))
 (allow file-read* (subpath "/Library/Developer/CommandLineTools"))
 (allow file-read-metadata (literal "/Library/Frameworks"))

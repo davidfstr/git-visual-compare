@@ -93,7 +93,9 @@ cat > "$SBPL" << SBPL
 (allow file-read-metadata (literal "/etc"))       ; symlink — content covered by /private/etc
 (allow file-read-metadata (literal "/private"))  ; symlink resolution for /etc /tmp /var
 (allow file-read* (subpath "/private/etc"))
-(allow file-read* (subpath "/private/tmp"))
+(allow file-read-metadata (literal "/private/tmp"))  ; directory stat only
+(allow file-read* (path-regex #"^/private/tmp/gvc-"))       ; sandbox policy files + test harness dirs
+(allow file-read* (path-regex #"^/private/tmp/tmp[^/]*\.gvc$"))  ; gvc IPC diff temp files
 (allow file-read-metadata (literal "/private/var"))  ; stat without directory listing
 ; /private/var/folders: stat intermediate dirs; full read only under T/ (temp) and C/ (cache)
 (allow file-read-metadata

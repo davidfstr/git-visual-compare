@@ -105,7 +105,6 @@ cat > "$SBPL" << SBPL
 (allow file-read* (subpath "/System/Library/Frameworks"))
 (allow file-read* (subpath "/System/Library/PrivateFrameworks"))
 (allow file-read-metadata (literal "/System/Volumes"))  ; stat /System/Volumes itself
-(allow file-read* (subpath "/System/Volumes/Data"))
 (allow file-read* (subpath "/System/Volumes/Preboot"))
 (allow file-read-metadata (literal "/usr"))   ; directory stat
 (allow file-read* (subpath "/usr/bin"))       ; git, python symlinks, etc.

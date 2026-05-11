@@ -35,8 +35,6 @@ cat > "$SBPL" << SBPL
 
 ; --- Preferences / IPC primitives ---
 (allow user-preference-read)
-(allow ipc-posix-shm)
-(allow ipc-posix-sem)
 
 ; --- Kernel / IOKit ---
 (allow iokit-open)

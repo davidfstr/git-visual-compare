@@ -11,61 +11,30 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Write Seatbelt sandbox policy to temp file
 SBPL="$(mktemp /tmp/gvc-sandbox.XXXXXX)"
 trap 'rm -f "$SBPL"' EXIT
-cat > "$SBPL" << SBPL
+
+# --- Mach IPC allowlist (generated) ---
+# Static names come from sandbox-com-apple-services.txt, enumerated once
+# via: launchctl print system/user/$UID/gui/$UID
+# The WebKit regex covers PID-suffixed dynamic names not in that snapshot.
+MACH_SERVICES="$SCRIPT_DIR/sandbox-com-apple-services.txt"
+
+cat > "$SBPL" << SBPL_MACH_OPEN
 (version 1)
 
 ; --- Mach IPC ---
-; Explicit allowlist built from observed denials (iterative enumeration).
-; Run enumeration: replace allow below with (deny mach-lookup (global-name-regex #"^com\\.apple\\."))
-; then: log stream --predicate 'process == "kernel" AND eventMessage CONTAINS "mach-lookup"' --level error
+; Upper-bound allowlist: all com.apple.* services visible at enumeration time
+; (sandbox-com-apple-services.txt) plus a regex for WebKit's runtime-
+; registered PID-suffixed names (com.apple.WebKit.GPU.<pid> etc.).
 (allow mach-lookup
-  ; Python/AppKit startup (Cocoa event loop, NSApplication init)
-  (global-name "com.apple.bsd.dirhelper")
-  (global-name "com.apple.carboncore.csnameddata")
-  (global-name "com.apple.CoreServices.coreservicesd")
-  (global-name "com.apple.coreservices.launchservicesd")
-  (global-name "com.apple.DiskArbitration.diskarbitrationd")
-  (global-name "com.apple.distributed_notifications@Uv3")
-  (global-name "com.apple.logd")
-  (global-name "com.apple.lsd.mapdb")
-  (global-name "com.apple.lsd.modifydb")             ; app registers with Launch Services
-  (global-name "com.apple.pasteboard.1")             ; AppKit pasteboard registration
-  (global-name "com.apple.system.notification_center")
-  (global-name "com.apple.system.opendirectoryd.libinfo")
-  (global-name "com.apple.system.opendirectoryd.membership")
-  (global-name "com.apple.tccd.system")              ; WKWebView permission checks
-  (global-name "com.apple.windowserver.active")
-  ; AppKit window management and rendering
-  (global-name "com.apple.CARenderServer")           ; Core Animation render server
-  (global-name "com.apple.coreservices.appleevents")
-  (global-name "com.apple.cvmsServ")                 ; CoreVideo Metal shaders
-  (global-name "com.apple.dock.server")
-  (global-name "com.apple.dock.fullscreen")
-  (global-name "com.apple.hiservices-xpcservice")
-  (global-name "com.apple.pluginkit.pkd")
-  (global-name "com.apple.PowerManagement.control")
-  (global-name "com.apple.touchbarserver.mig")
-  (global-name "com.apple.tsm.uiserver")
-  (global-name "com.apple.ViewBridgeAuxiliary")
-  (global-name "com.apple.window_proxies")
-  (global-name "com.apple.windowmanager.server")
-  ; WebKit sub-process bootstrap
-  (global-name "com.apple.WebKit.GPU")
-  (global-name "com.apple.WebKit.WebContent")
-  (global-name "com.apple.webprivacyd")
-  ; Accessibility / text / audio (needed by WKWebView)
-  (global-name "com.apple.accessibility.mediaaccessibilityd")
-  (global-name "com.apple.appkit.restoration_storage")
-  (global-name "com.apple.audio.AudioComponentRegistrar")
-  (global-name "com.apple.uiintelligencesupport.agent")
-  ; Icon services (AppKit window/app icons)
-  (global-name "com.apple.iconservices")
-  (global-name "com.apple.iconservices.store")
-  ; Audio sandbox helper (WKWebView audio)
-  (global-name "com.apple.audio.SandboxHelper")
-  ; Diagnostics / analytics (accessed by Python, git, and Apple frameworks)
-  (global-name "com.apple.analyticsd")
-  (global-name "com.apple.diagnosticd")
+SBPL_MACH_OPEN
+
+while IFS= read -r name; do
+  printf '  (global-name "%s")\n' "$name"
+done < "$MACH_SERVICES" >> "$SBPL"
+
+cat >> "$SBPL" << SBPL_MACH_CLOSE
+  ; PID-suffixed WebKit sub-process names registered at runtime
+  (global-name-regex #"^com\\.apple\\.WebKit\\.")
 )
 
 ; --- Deny everything else by default ---
@@ -213,7 +182,7 @@ cat > "$SBPL" << SBPL
 (allow file-write* (subpath "$HOME/Library/WebKit/org.python.python")) ; Python WebKit storage
 ; Project directory (test outputs, .pytest_cache, etc.)
 (allow file-write* (subpath "$SCRIPT_DIR"))
-SBPL
+SBPL_MACH_CLOSE
 
 # Run provided command inside Seatbelt sandbox (via sandbox-exec).
 # GVC_SEATBELT_SANDBOX=1 signals to tests that some capabilities are restricted.

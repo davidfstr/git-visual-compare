@@ -76,13 +76,21 @@ cat > "$SBPL" << SBPL
   (extension-class "com.apple.app-sandbox.read")
   (extension-class "com.apple.app-sandbox.read-write"))
 
-; --- File reads (pure allowlist — intentionally excludes most of $HOME) ---
+; --- File reads (allowlist only; intentionally excludes most of $HOME) ---
 ; Root directory itself (needed by dyld during process startup)
 (allow file-read* (literal "/"))
 ; Standard Unix + macOS system paths
 (allow file-read* (subpath "/bin"))
 (allow file-read* (subpath "/sbin"))
-(allow file-read* (subpath "/dev"))
+(allow file-read* (literal "/dev"))         ; directory entry for ls/stat
+(allow file-read* (literal "/dev/null"))
+(allow file-read* (literal "/dev/stdin"))
+(allow file-read* (literal "/dev/stdout"))
+(allow file-read* (literal "/dev/stderr"))
+(allow file-read* (literal "/dev/urandom"))
+(allow file-read* (literal "/dev/random"))
+(allow file-read* (literal "/dev/tty"))     ; terminal detection
+(allow file-read* (literal "/dev/dtracehelper"))
 (allow file-read* (subpath "/etc"))
 (allow file-read* (subpath "/private"))
 (allow file-read* (subpath "/tmp"))

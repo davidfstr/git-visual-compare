@@ -138,7 +138,8 @@ cat > "$SBPL" << SBPL
 (allow file-read* (subpath "$HOME/Library/Caches/org.python.python")) ; Python bytecode cache
 (allow file-read* (subpath "$HOME/Library/Caches/pip"))               ; pip package cache
 (allow file-read* (subpath "$HOME/Library/Caches/pypoetry"))          ; poetry package cache
-(allow file-read* (subpath "$HOME/Library/WebKit"))                   ; WebKit storage
+(allow file-read* (subpath "$HOME/Library/WebKit/net.dafoster.gvc"))  ; gvc WebKit storage
+(allow file-read* (subpath "$HOME/Library/WebKit/org.python.python")) ; Python WebKit storage
 (allow file-read* (subpath "$HOME/Library/Application Support/pypoetry")) ; poetry config
 (allow file-read* (subpath "$HOME/.local/bin"))        ; poetry symlink
 (allow file-read* (subpath "$HOME/.local/pipx/venvs")) ; poetry pipx venv
@@ -156,7 +157,8 @@ cat > "$SBPL" << SBPL
 (allow file-write* (literal "/dev/stderr"))
 ; WebKit caches (required for WKWebView JS evaluation to complete)
 (allow file-write* (subpath "$HOME/Library/Caches/org.python.python"))
-(allow file-write* (subpath "$HOME/Library/WebKit"))
+(allow file-write* (subpath "$HOME/Library/WebKit/net.dafoster.gvc"))  ; gvc WebKit storage
+(allow file-write* (subpath "$HOME/Library/WebKit/org.python.python")) ; Python WebKit storage
 ; Project directory (test outputs, .pytest_cache, etc.)
 (allow file-write* (subpath "$SCRIPT_DIR"))
 SBPL

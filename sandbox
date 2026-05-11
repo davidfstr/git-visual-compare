@@ -118,7 +118,6 @@ cat > "$SBPL" << SBPL
 (allow file-read* (subpath "/Library/Developer/CommandLineTools"))
 (allow file-read-metadata (literal "/Library/Frameworks"))
 (allow file-read* (subpath "/Library/Frameworks/Python.framework"))
-(allow file-read* (subpath "/Library/Preferences"))
 ; stat/lstat on intermediate $HOME path components needed for realpath traversal.
 ; file-read-metadata allows stat/lstat WITHOUT allowing directory listing.
 (allow file-read-metadata

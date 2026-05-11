@@ -130,6 +130,9 @@ cat > "$SBPL" << SBPL
   (literal "$HOME/.local/pipx")
   (literal "$HOME/Library")
   (literal "$HOME/Library/Application Support")
+  (literal "$HOME/Library/Logs")
+  (literal "$HOME/Library/Logs/gvc")
+  (literal "$HOME/Library/WebKit")
   (literal "${SCRIPT_DIR%/*}"))
 ; User subtrees actually needed
 (allow file-read* (subpath "$HOME/Library/Caches/com.apple.python"))  ; Python system cache
@@ -154,6 +157,8 @@ cat > "$SBPL" << SBPL
 (allow file-write* (literal "/dev/null"))
 (allow file-write* (literal "/dev/stdout"))
 (allow file-write* (literal "/dev/stderr"))
+; gvc log file (written by GUI server on manual/non-test invocations)
+(allow file-write* (subpath "$HOME/Library/Logs/gvc"))
 ; WebKit caches (required for WKWebView JS evaluation to complete)
 (allow file-write* (subpath "$HOME/Library/Caches/org.python.python"))
 (allow file-write* (subpath "$HOME/Library/WebKit/net.dafoster.gvc"))  ; gvc WebKit storage

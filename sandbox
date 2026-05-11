@@ -90,7 +90,6 @@ cat > "$SBPL" << SBPL
 (allow file-read* (literal "/dev/urandom"))
 (allow file-read* (literal "/dev/random"))
 (allow file-read* (literal "/dev/tty"))     ; terminal detection
-(allow file-read* (literal "/dev/dtracehelper"))
 (allow file-read* (subpath "/etc"))
 (allow file-read-metadata (literal "/private"))  ; symlink resolution for /etc /tmp /var
 (allow file-read* (subpath "/private/etc"))
@@ -146,8 +145,6 @@ cat > "$SBPL" << SBPL
 (allow file-write* (literal "/dev/null"))
 (allow file-write* (literal "/dev/stdout"))
 (allow file-write* (literal "/dev/stderr"))
-(allow file-write* (literal "/dev/dtracehelper"))
-(allow file-ioctl  (literal "/dev/dtracehelper"))
 ; WebKit caches (required for WKWebView JS evaluation to complete)
 (allow file-write* (subpath "$HOME/Library/Caches/org.python.python"))
 (allow file-write* (subpath "$HOME/Library/WebKit"))

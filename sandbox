@@ -134,7 +134,10 @@ cat > "$SBPL" << SBPL
   (literal "$HOME/Library/Application Support")
   (literal "${SCRIPT_DIR%/*}"))
 ; User subtrees actually needed
-(allow file-read* (subpath "$HOME/Library/Caches"))                  ; Python + WebKit caches
+(allow file-read* (subpath "$HOME/Library/Caches/com.apple.python"))  ; Python system cache
+(allow file-read* (subpath "$HOME/Library/Caches/org.python.python")) ; Python bytecode cache
+(allow file-read* (subpath "$HOME/Library/Caches/pip"))               ; pip package cache
+(allow file-read* (subpath "$HOME/Library/Caches/pypoetry"))          ; poetry package cache
 (allow file-read* (subpath "$HOME/Library/WebKit"))                   ; WebKit storage
 (allow file-read* (subpath "$HOME/Library/Application Support/pypoetry")) ; poetry config
 (allow file-read* (subpath "$HOME/.local/bin"))        ; poetry symlink

@@ -95,7 +95,11 @@ cat > "$SBPL" << SBPL
 (allow file-read* (subpath "/private/etc"))
 (allow file-read* (subpath "/private/tmp"))
 (allow file-read-metadata (literal "/private/var"))  ; stat without directory listing
-(allow file-read* (subpath "/private/var/folders"))
+; /private/var/folders: stat intermediate dirs; full read only under T/ (temp) and C/ (cache)
+(allow file-read-metadata
+  (literal "/private/var/folders")
+  (path-regex #"^/private/var/folders/[^/]+(/[^/]+)?$"))
+(allow file-read* (path-regex #"^/private/var/folders/[^/]+/[^/]+/T(/|$)"))
 (allow file-read* (subpath "/tmp"))
 (allow file-read* (subpath "/var"))
 (allow file-read-metadata (literal "/System"))    ; stat /System itself (dyld startup)
@@ -140,7 +144,7 @@ cat > "$SBPL" << SBPL
 ; --- File writes (restricted) ---
 ; Temp directories
 (allow file-write* (subpath "/private/tmp"))
-(allow file-write* (subpath "/private/var/folders"))
+(allow file-write* (path-regex #"^/private/var/folders/[^/]+/[^/]+/C/"))
 ; Standard character devices
 (allow file-write* (literal "/dev/null"))
 (allow file-write* (literal "/dev/stdout"))

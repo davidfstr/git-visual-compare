@@ -33,8 +33,12 @@ while IFS= read -r name; do
 done < "$MACH_SERVICES" >> "$SBPL"
 
 cat >> "$SBPL" << SBPL_MACH_CLOSE
+  ; Versioned name — @Uv3 suffix observed on macOS 15.7.5; regex covers future versions
+  (global-name-regex #"^com\\.apple\\.distributed_notifications(@|$)")
   ; PID-suffixed WebKit sub-process names registered at runtime
   (global-name-regex #"^com\\.apple\\.WebKit\\.")
+  ; XPC variants of com.apple.* services (same base name + " (xpc)" suffix)
+  (global-name-regex #"^com\\.apple\\..* \\(xpc\\)$")
 )
 
 ; --- Deny everything else by default ---

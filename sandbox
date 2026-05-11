@@ -76,9 +76,36 @@ cat > "$SBPL" << SBPL
   (extension-class "com.apple.app-sandbox.read")
   (extension-class "com.apple.app-sandbox.read-write"))
 
-; --- File reads ---
-; Broad read access: Python runtime, system frameworks, project source, etc.
-(allow file-read* (subpath "/"))
+; --- File reads (pure allowlist — intentionally excludes most of $HOME) ---
+; Root directory itself (needed by dyld during process startup)
+(allow file-read* (literal "/"))
+; Standard Unix + macOS system paths
+(allow file-read* (subpath "/bin"))
+(allow file-read* (subpath "/sbin"))
+(allow file-read* (subpath "/dev"))
+(allow file-read* (subpath "/etc"))
+(allow file-read* (subpath "/private"))
+(allow file-read* (subpath "/tmp"))
+(allow file-read* (subpath "/var"))
+(allow file-read* (subpath "/System"))
+(allow file-read* (subpath "/usr"))
+(allow file-read* (subpath "/Library"))
+(allow file-read* (subpath "/opt"))
+; stat/lstat on intermediate $HOME path components needed for realpath traversal.
+; file-read-metadata allows stat/lstat WITHOUT allowing directory listing.
+(allow file-read-metadata
+  (literal "/Users")
+  (literal "$HOME")
+  (literal "$HOME/.local")
+  (literal "$HOME/.local/pipx")
+  (literal "${SCRIPT_DIR%/*}"))
+; User subtrees actually needed
+(allow file-read* (subpath "$HOME/Library"))           ; Python/WebKit caches, prefs
+(allow file-read* (subpath "$HOME/.local/bin"))        ; poetry symlink
+(allow file-read* (subpath "$HOME/.local/pipx/venvs")) ; poetry pipx venv
+(allow file-read* (literal "$HOME/.gitconfig"))        ; git reads this on every invocation
+; Project source + .venv
+(allow file-read* (subpath "$SCRIPT_DIR"))
 
 ; --- File writes (restricted) ---
 ; Temp directories

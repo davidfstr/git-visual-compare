@@ -148,8 +148,9 @@ cat > "$SBPL" << SBPL
 (allow file-read* (subpath "$SCRIPT_DIR"))
 
 ; --- File writes (restricted) ---
-; Temp directories
-(allow file-write* (subpath "/private/tmp"))
+; Temp directories (write rules mirror the read rules above)
+(allow file-write* (path-regex #"^/private/tmp/gvc-"))
+(allow file-write* (path-regex #"^/private/tmp/tmp[^/]*\.gvc$"))
 (allow file-write* (path-regex #"^/private/var/folders/[^/]+/[^/]+/C/"))
 ; Standard character devices
 (allow file-write* (literal "/dev/null"))

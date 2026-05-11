@@ -89,7 +89,12 @@ cat > "$SBPL" << SBPL
 (allow file-read* (subpath "/var"))
 (allow file-read* (subpath "/System"))
 (allow file-read* (subpath "/usr"))
-(allow file-read* (subpath "/Library"))
+(allow file-read* (literal "/Library"))
+(allow file-read-metadata (literal "/Library/Developer"))
+(allow file-read* (subpath "/Library/Developer/CommandLineTools"))
+(allow file-read-metadata (literal "/Library/Frameworks"))
+(allow file-read* (subpath "/Library/Frameworks/Python.framework"))
+(allow file-read* (subpath "/Library/Preferences"))
 (allow file-read* (subpath "/opt"))
 ; stat/lstat on intermediate $HOME path components needed for realpath traversal.
 ; file-read-metadata allows stat/lstat WITHOUT allowing directory listing.
@@ -98,9 +103,13 @@ cat > "$SBPL" << SBPL
   (literal "$HOME")
   (literal "$HOME/.local")
   (literal "$HOME/.local/pipx")
+  (literal "$HOME/Library")
+  (literal "$HOME/Library/Application Support")
   (literal "${SCRIPT_DIR%/*}"))
 ; User subtrees actually needed
-(allow file-read* (subpath "$HOME/Library"))           ; Python/WebKit caches, prefs
+(allow file-read* (subpath "$HOME/Library/Caches"))                  ; Python + WebKit caches
+(allow file-read* (subpath "$HOME/Library/WebKit"))                   ; WebKit storage
+(allow file-read* (subpath "$HOME/Library/Application Support/pypoetry")) ; poetry config
 (allow file-read* (subpath "$HOME/.local/bin"))        ; poetry symlink
 (allow file-read* (subpath "$HOME/.local/pipx/venvs")) ; poetry pipx venv
 (allow file-read* (literal "$HOME/.gitconfig"))        ; git reads this on every invocation

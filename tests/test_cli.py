@@ -3,7 +3,16 @@
 from harness.app import GvcApp
 from harness.diff_fixture import DiffFixture
 from harness.sandbox import GvcSandbox
+import os
 import pytest
+
+
+_IN_SEATBELT_SANDBOX = (
+    # Claude Code's own sandbox
+    (os.environ.get("CLAUDECODE") == "1" and os.environ.get("SANDBOX_RUNTIME") == "1") or
+    # ./sandbox script (custom Seatbelt profile for local dev/CI)
+    os.environ.get("GVC_SEATBELT_SANDBOX") == "1"
+)
 
 
 # === Test: Application: Lifecycle ===
@@ -23,6 +32,15 @@ def test_when_gvc_run_in_terminal_given_no_gui_running_then_starts_gui_and_opens
             app.wait_for_windows(1)
 
     with subtests.test(gui_type='stub_app'):
+        if _IN_SEATBELT_SANDBOX:
+            # It is difficult to get the `open` command used by enable_stub_app()
+            # to operate correctly inside a Seatbelt sandbox:
+            # - Claude Code's Seatbelt sandbox cannot be configured with
+            #   the `(allow lsopen)` rule that `open` needs
+            # - The ./sandbox script doesn't provide an unknown set of
+            #   Mach IPC permissions needed for `open` to forward env vars
+            #   to what it launches
+            pytest.skip('cannot test "open" inside Seatbelt sandbox')
         with GvcSandbox().enable_stub_app() as sandbox, GvcApp(sandbox) as app:
             app.run_cli(diff_fixture.args, cwd=diff_fixture.repo, timeout=COLD_START_TIMEOUT)
             app.wait_for_windows(1)

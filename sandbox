@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# Run a command inside a macOS Seatbelt sandbox tailored for gvc development.
+# Usage: ./sandbox <command> [args...]
+# Example: ./sandbox poetry run pytest
+
+# If an error occurs abort the script
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Write Seatbelt sandbox policy to temp file
+SBPL="$(mktemp /tmp/gvc-sandbox.XXXXXX)"
+trap 'rm -f "$SBPL"' EXIT
+cat > "$SBPL" << SBPL
+(version 1)
+
+; --- Mach IPC ---
+; Must appear before (deny default). Covers all com.apple.* services including
+; the dynamic/versioned ones WKWebView needs for JS evaluation callbacks.
+(allow mach-lookup
+  (global-name-regex #"^com\\.apple\\."))
+
+; --- Deny everything else by default ---
+(deny default)
+
+; --- Process ---
+(allow process-exec)
+(allow process-fork)
+; NOTE: Only needed by 1 test: test_when_gvc_run_in_terminal_given_no_gui_running_then_starts_gui_and_opens_new_diff_window
+;       which already fails to execute inside this sandbox for other reasons
+;(allow lsopen)
+(allow process-info* (target same-sandbox))
+(allow signal (target same-sandbox))
+(allow mach-priv-task-port (target same-sandbox))
+
+; --- Preferences / IPC primitives ---
+(allow user-preference-read)
+(allow ipc-posix-shm)
+(allow ipc-posix-sem)
+
+; --- Kernel / IOKit ---
+(allow iokit-open)
+(allow sysctl-read)
+
+; --- Sockets ---
+; AF_SYSTEM (routing socket — needed by network stack init)
+(allow system-socket
+  (require-all (socket-domain AF_SYSTEM) (socket-protocol 2)))
+; AF_UNIX (gvc uses Unix sockets for CLI→GUI IPC and test harness control)
+(allow system-socket (socket-domain AF_UNIX))
+(allow network-bind    (local unix-socket (path-regex #"^/")))
+(allow network-outbound (remote unix-socket (path-regex #"^/")))
+; Localhost TCP (used by WKWebView's networking process internally)
+(allow network-bind    (local ip "localhost:*"))
+(allow network-outbound (remote ip "localhost:*"))
+
+; --- WebKit child-process bootstrap ---
+; WKWebView spawns GPU, WebContent, and Networking helper processes.
+; These extensions let the parent grant them sandbox capabilities.
+(allow mach-issue-extension
+  (extension-class "com.apple.webkit.extension.mach"))
+(allow generic-issue-extension
+  (extension-class "com.apple.webkit.mach-bootstrap"))
+(allow mach-register
+  (global-name-regex #"^com\\.apple\\.WebKit\\."))
+(allow mach-register
+  (local-name "com.apple.axserver")
+  (local-name "com.apple.tsm.portname")
+  (local-name "com.apple.coredrag"))
+
+; --- HID (text selection in WKWebView) ---
+(allow hid-control)
+
+; --- File extensions for WebKit sandboxed sub-processes ---
+(allow file-issue-extension
+  (extension-class "com.apple.app-sandbox.read")
+  (extension-class "com.apple.app-sandbox.read-write"))
+
+; --- File reads ---
+; Broad read access: Python runtime, system frameworks, project source, etc.
+(allow file-read* (subpath "/"))
+
+; --- File writes (restricted) ---
+; Temp directories
+(allow file-write* (subpath "/private/tmp"))
+(allow file-write* (subpath "/private/var/folders"))
+; Standard character devices
+(allow file-write* (literal "/dev/null"))
+(allow file-write* (literal "/dev/stdout"))
+(allow file-write* (literal "/dev/stderr"))
+(allow file-write* (literal "/dev/dtracehelper"))
+(allow file-ioctl  (literal "/dev/dtracehelper"))
+; WebKit caches (required for WKWebView JS evaluation to complete)
+(allow file-write* (subpath "$HOME/Library/Caches/org.python.python"))
+(allow file-write* (subpath "$HOME/Library/WebKit"))
+; Project directory (test outputs, .pytest_cache, etc.)
+(allow file-write* (subpath "$SCRIPT_DIR"))
+SBPL
+
+# Run provided command inside Seatbelt sandbox (via sandbox-exec).
+# GVC_SEATBELT_SANDBOX=1 signals to tests that some capabilities are restricted.
+exec sandbox-exec -f "$SBPL" env GVC_SEATBELT_SANDBOX=1 "$@"

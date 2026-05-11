@@ -99,7 +99,12 @@ cat > "$SBPL" << SBPL
 (allow file-read* (subpath "/tmp"))
 (allow file-read* (subpath "/var"))
 (allow file-read* (subpath "/System"))
-(allow file-read* (subpath "/usr"))
+(allow file-read-metadata (literal "/usr"))   ; directory stat
+(allow file-read* (subpath "/usr/bin"))       ; git, python symlinks, etc.
+(allow file-read* (subpath "/usr/lib"))       ; system dylibs
+(allow file-read* (subpath "/usr/libexec"))   ; helper/XPC processes
+(allow file-read* (subpath "/usr/share"))     ; locale, timezone, terminfo
+(allow file-read* (subpath "/usr/local"))     ; Homebrew (Intel)
 (allow file-read* (literal "/Library"))
 (allow file-read-metadata (literal "/Library/Developer"))
 (allow file-read* (subpath "/Library/Developer/CommandLineTools"))

@@ -6,7 +6,10 @@ correctly.
 from harness.app import GvcApp
 from harness.diff_fixture import DiffFixture
 from harness.playwrightkit import Page, expect
+from harness.sandbox import GvcSandbox
+import json
 import pytest
+import time
 from typing import Literal, assert_never
 
 
@@ -32,9 +35,62 @@ def test_max_font_size_is_currently_32_pt() -> None:
     pass
 
 
-@pytest.mark.skip('not yet automated')
-def test_when_gvc_is_quit_and_reopened_and_new_diff_window_appears_then_uses_same_font_size_as_before_quit() -> None:
-    pass
+def test_when_gvc_is_quit_and_reopened_and_new_diff_window_appears_then_uses_same_font_size_as_before_quit(
+    gvc_sandbox: GvcSandbox,
+    diff_fixture: DiffFixture,
+) -> None:
+    with GvcApp(gvc_sandbox) as app1:
+        window = app1.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+        page = app1.page(window)
+        _wait_for_page_init_to_apply_font_size(page)
+        initial_size = _read_font_size(page)
+        page.press("Meta+=")
+        expected_size = initial_size + 1
+        _wait_until_font_size_saved(gvc_sandbox, expected_size)
+
+    with GvcApp(gvc_sandbox) as app2:
+        window2 = app2.run_cli(diff_fixture.args, cwd=diff_fixture.repo)
+        page2 = app2.page(window2)
+        _wait_for_page_init_to_apply_font_size(page2)
+        actual_size = _read_font_size(page2)
+        assert actual_size == expected_size
+
+
+def _wait_for_page_init_to_apply_font_size(page: Page, timeout: float = 5.0) -> None:
+    """Waits until diff.js init() has run (--font-size inline style is set by applyFontSize)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        style_val = page.evaluate(
+            "() => document.documentElement.style.getPropertyValue('--font-size')"
+        )
+        if isinstance(style_val, str) and style_val:
+            return
+        time.sleep(0.1)
+    pytest.fail(f"Page init (applyFontSize) did not complete within {timeout}s")
+
+
+def _read_font_size(page: Page) -> int:
+    size = page.evaluate(
+        "() => parseFloat("
+        "  getComputedStyle(document.documentElement).getPropertyValue('--font-size')"
+        ") || 13"
+    )
+    assert isinstance(size, (int, float))
+    return int(size)
+
+
+def _wait_until_font_size_saved(sandbox: GvcSandbox, expected: int, timeout: float = 3.0) -> None:
+    prefs_path = sandbox.root / "data" / "prefs.json"
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            data = json.loads(prefs_path.read_text())
+            if data.get("font_size") == expected:
+                return
+        except (FileNotFoundError, ValueError):
+            pass
+        time.sleep(0.05)
+    pytest.fail(f"Prefs not saved with font_size={expected} within {timeout}s")
 
 
 # === Test: Select and Copy ===

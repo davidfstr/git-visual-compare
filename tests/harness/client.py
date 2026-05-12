@@ -110,7 +110,7 @@ class TestClient:
             s.settimeout(5.0)
             try:
                 s.connect(str(self._sock_path))
-            except FileNotFoundError:
+            except (FileNotFoundError, ConnectionRefusedError):
                 raise GvcGuiNotDoneStarting()
             s.sendall(json.dumps(payload).encode("utf-8"))
             s.shutdown(socket.SHUT_WR)

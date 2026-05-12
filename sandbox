@@ -134,6 +134,9 @@ cat > "$SBPL" << SBPL_END
 ; Standard Unix + macOS system paths
 (allow file-read* (subpath "/bin"))
 (allow file-read* (subpath "/sbin"))
+(allow file-read* (subpath "/opt/local/bin"))
+(allow file-read* (subpath "/opt/local/sbin"))
+(allow file-read* (subpath "/opt/local/lib"))
 (allow file-read* (literal "/dev"))         ; directory entry for ls/stat
 (allow file-read* (literal "/dev/null"))
 (allow file-read* (literal "/dev/stdin"))

@@ -152,6 +152,7 @@ cat > "$SBPL" << SBPL_END
 (allow file-read* (subpath "/System/Cryptexes/OS"))
 (allow file-read-metadata (literal "/System/Library"))
 (allow file-read* (subpath "/System/Library/CoreServices"))
+(allow file-read* (subpath "/System/Library/Fonts"))  ; don't render menu titles with ���
 (allow file-read* (subpath "/System/Library/Frameworks"))
 (allow file-read* (subpath "/System/Library/PrivateFrameworks"))
 (allow file-read-metadata (literal "/System/Volumes"))  ; stat /System/Volumes itself

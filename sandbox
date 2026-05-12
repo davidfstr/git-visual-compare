@@ -223,6 +223,9 @@ cat > "$SBPL" << SBPL_END
 (allow file-write* (subpath "$HOME/Library/WebKit/org.python.python")) ; Python WebKit storage
 ; Project directory (test outputs, .pytest_cache, etc.)
 (allow file-write* (subpath "$SCRIPT_DIR"))
+; Deny writes to the sandbox script itself and Claude Code config (more specific rules override the subpath above)
+(deny file-write* (literal "$SCRIPT_DIR/sandbox"))
+(deny file-write* (subpath "$SCRIPT_DIR/.claude"))
 SBPL_END
 
 # Run provided command inside Seatbelt sandbox (via sandbox-exec).

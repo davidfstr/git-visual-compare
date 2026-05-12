@@ -15,9 +15,15 @@ trap 'rm -f "$SBPL"' EXIT
 cat > "$SBPL" << SBPL_END
 (version 1)
 
+; --- Deny everything by default ---
+(deny default)
+
 ; --- Mach IPC ---
-; Minimal explicit allowlist determined by binary search over the full set of
-; com.apple.* services (enumerated via launchctl).
+; Minimal explicit allowlist determined by:
+; 1. inspecting logs for sandbox deny log entries
+; 2. binary search over the full set of com.apple.* services
+;    (enumerated via launchctl) to discover hidden services that were denied
+;    but not logged.
 ; 
 ; NOTE: WebKit's PID-suffixed sub-process names (com.apple.WebKit.GPU.<pid> etc.)
 ; are not statically enumerable, so they are covered by a separate regex at the end.
@@ -56,7 +62,7 @@ cat > "$SBPL" << SBPL_END
   (global-name "com.apple.tsm.uiserver")
   (global-name "com.apple.uiintelligencesupport.agent")
   (global-name "com.apple.ViewBridgeAuxiliary")
-  (global-name "com.apple.webprivacyd")
+  (global-name "com.apple.webprivacyd")  ; tests pass if omitted, but still appears in deny logs
   (global-name "com.apple.window_proxies")
   (global-name "com.apple.windowmanager.server")
   (global-name "com.apple.windowserver.active")
@@ -64,9 +70,6 @@ cat > "$SBPL" << SBPL_END
   ; PID-suffixed WebKit sub-process names registered at runtime
   (global-name-regex #"^com\\.apple\\.WebKit\\.")
 )
-
-; --- Deny everything else by default ---
-(deny default)
 
 ; --- Process ---
 (allow process-exec)
@@ -110,9 +113,6 @@ cat > "$SBPL" << SBPL_END
   (local-name "com.apple.axserver")
   (local-name "com.apple.tsm.portname")
   (local-name "com.apple.coredrag"))
-
-; --- HID (text selection in WKWebView) ---
-(allow hid-control)
 
 ; --- File extensions for WebKit sandboxed sub-processes ---
 (allow file-issue-extension

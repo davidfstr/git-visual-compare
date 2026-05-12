@@ -88,7 +88,10 @@ cat > "$SBPL" << SBPL_END
 ; - A read of a "com.apple.hitoolbox" preference is logged as denied but
 ;   does not cause any tests to fail.
 
-; --- Kernel / IOKit ---
+; --- Kernel ---
+; sysctl-read is allowed broadly: all keys expose machine configuration only,
+; no user data. Enumerating specific keys would be brittle to future changes
+; in Python, git, or macOS.
 (allow sysctl-read)
 
 ; --- Sockets ---

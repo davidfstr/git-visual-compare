@@ -81,8 +81,12 @@ cat > "$SBPL" << SBPL_END
 (allow signal (target same-sandbox))
 (allow mach-priv-task-port (target same-sandbox))
 
-; --- Preferences / IPC primitives ---
-(allow user-preference-read)
+; --- Preferences ---
+; (allow user-preference-read) is intentionally omitted:
+; - gvc's prefs use a JSON file (not NSUserDefaults),
+;   so no preference-domain reads are needed.
+; - A read of a "com.apple.hitoolbox" preference is logged as denied but
+;   does not cause any tests to fail.
 
 ; --- Kernel / IOKit ---
 (allow iokit-open)

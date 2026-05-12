@@ -2,17 +2,41 @@
 # Run a command inside a macOS Seatbelt sandbox tailored for gvc development.
 # Usage: ./sandbox <command> [args...]
 # Example: ./sandbox poetry run pytest
+#
+# Two modes:
+#   Outer sandbox — wraps the Claude Code process itself. Activated when the
+#     command is "claude" and resolves to the global Claude Code installation.
+#     Permits network (Anthropic API) and Claude Code's own config/data paths.
+#   Inner sandbox — wraps bash commands that Claude Code executes via its Bash
+#     tool. Denies network and limits file access to the project tree.
+#   When Claude Code (outer) spawns ./sandbox bash -c ... (inner), macOS
+#   Seatbelt intersects both policies, so inner restrictions always win.
 
 # If an error occurs abort the script
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Detect outer sandbox mode: $1 resolves (via PATH lookup then symlink expansion)
+# to a binary inside $HOME/.local/share/claude/, the standard Claude Code install tree.
+OUTER_MODE=false
+RESOLVED_CLAUDE=""
+if [[ -n "${1:-}" ]]; then
+    _CLAUDE_PATH="$(command -v "$1" 2>/dev/null || true)"
+    if [[ -n "$_CLAUDE_PATH" ]]; then
+        _CLAUDE_REAL="$(realpath "$_CLAUDE_PATH" 2>/dev/null || true)"
+        if [[ "$_CLAUDE_REAL" == "$HOME/.local/share/claude/"* ]]; then
+            OUTER_MODE=true
+            RESOLVED_CLAUDE="$_CLAUDE_REAL"
+        fi
+    fi
+fi
+
 # Write Seatbelt sandbox policy to temp file
 SBPL="$(mktemp /tmp/gvc-sandbox.XXXXXX)"
 trap 'rm -f "$SBPL"' EXIT
 
-cat > "$SBPL" << SBPL_END
+cat > "$SBPL" << BASE_SBPL_END
 (version 1)
 
 ; --- Deny everything by default ---
@@ -226,8 +250,119 @@ cat > "$SBPL" << SBPL_END
 ; Deny writes to the sandbox script itself and Claude Code config (more specific rules override the subpath above)
 (deny file-write* (literal "$SCRIPT_DIR/sandbox"))
 (deny file-write* (subpath "$SCRIPT_DIR/.claude"))
-SBPL_END
+BASE_SBPL_END
+
+if $OUTER_MODE; then
+    cat >> "$SBPL" << OUTER_SBPL_END
+
+; === Outer sandbox: Claude Code process ===
+
+; Network: Claude Code requires outbound access to the Anthropic API
+(allow network*)
+
+; Claude Code binary and bundled resources (~/.local/share/claude/versions/...)
+(allow file-read* (subpath "$HOME/.local/share/claude"))
+; Parent directory stat needed to resolve the binary's own path
+(allow file-read-metadata (literal "$HOME/.local/share"))
+
+; Claude Code temp files (UID-specific dirs and other claude-* paths)
+(allow file-read* (path-regex #"^/private/tmp/claude-"))
+(allow file-write* (path-regex #"^/private/tmp/claude-"))
+
+; Global Claude Code config and session state (~/.claude/)
+; Distinct from the project-local $SCRIPT_DIR/.claude whose writes remain denied above.
+(allow file-read* (subpath "$HOME/.claude"))
+(allow file-write* (subpath "$HOME/.claude"))
+
+; Auth file written by "claude login"
+(allow file-read*
+  (literal "$HOME/.claude.json")
+  (literal "$HOME/.claude.json.backup"))
+(allow file-write*
+  (literal "$HOME/.claude.json")
+  (literal "$HOME/.claude.json.backup"))
+
+; MCP server cache and logs (Node.js)
+(allow file-read* (subpath "$HOME/Library/Caches/claude-cli-nodejs"))
+(allow file-write* (subpath "$HOME/Library/Caches/claude-cli-nodejs"))
+
+; Temp dir writes (Claude Code's Node.js runtime writes temp files here)
+(allow file-write* (path-regex #"^/private/var/folders/[^/]+/[^/]+/T(/|$)"))
+
+; IPC shared memory — notification center (repeated denials cause a spin loop)
+(allow ipc-posix-shm-read-data (ipc-posix-name "apple.shm.notification_center"))
+(allow ipc-posix-shm-write-create (ipc-posix-name "com.apple.AppleDatabaseChanged"))
+
+; Trust daemon — required for TLS certificate validation (Anthropic API calls)
+(allow mach-lookup (global-name "com.apple.trustd.agent"))
+
+; Node.js diagnostic tracing
+(allow file-read-data (literal "/dev/dtracehelper"))
+(allow file-ioctl (literal "/dev/null"))
+
+; Timezone data (Node.js / libc reads these for date formatting)
+(allow file-read-metadata
+  (literal "/private/var/db")
+  (literal "/private/var/db/timezone")
+  (literal "/private/var/db/timezone/zoneinfo")
+  (literal "/private/var/db/timezone/icutz"))
+
+; System-wide preferences (read-only)
+(allow file-read*
+  (literal "/Library/Preferences/.GlobalPreferences.plist")
+  (literal "/Library/Preferences/com.apple.networkd.plist")
+  (literal "/Library/Preferences/com.apple.security.plist")
+  (literal "/Library/Preferences/Logging/com.apple.diagnosticd.filter.plist"))
+
+; User preferences (read-only)
+(allow file-read*
+  (literal "$HOME/Library/Preferences/.GlobalPreferences.plist")
+  (literal "$HOME/Library/Preferences/.GlobalPreferences_m.plist")
+  (literal "$HOME/Library/Preferences/com.apple.security.plist")
+  (path-regex #"^$HOME/Library/Preferences/ByHost/\\.GlobalPreferences\\..*\\.plist$"))
+
+; Keychain infrastructure
+(allow file-read-metadata
+  (literal "/Library/Keychains")
+  (literal "/Library/Keychains/System.keychain")
+  (literal "/private/var/run/systemkeychaincheck.done")
+  (literal "$HOME/Library/Keychains")
+  (literal "$HOME/Library/Keychains/login.keychain"))
+(allow file-read*
+  (literal "$HOME/Library/Keychains/login.keychain-db")
+  (literal "/System/Library/Keychains/SystemTrustSettings.plist")
+  (subpath "/private/var/db/mds"))
+(allow mach-lookup
+  (global-name "com.apple.SecurityServer")
+  (global-name "com.apple.securityd")
+  (global-name "com.apple.securityd.xpc"))
+
+; FSEvents: Node.js file-change watching used by Claude Code internals
+(allow mach-lookup (global-name "com.apple.FSEvents"))
+
+; PTY/terminal: Claude Code uses xterm.js which requires PTY creation for its
+; interactive terminal UI. Without this, escape sequences render raw.
+(allow pseudo-tty)
+(allow file-read* (literal "/dev/ptmx"))
+(allow file-write* (literal "/dev/ptmx"))
+(allow file-write* (literal "/dev/tty"))
+(allow file-ioctl (literal "/dev/tty"))
+(allow file-ioctl (literal "/dev/null"))
+(allow file-read*  (path-regex #"^/dev/tty[a-z0-9]*"))
+(allow file-write* (path-regex #"^/dev/tty[a-z0-9]*"))
+(allow file-ioctl  (path-regex #"^/dev/tty[a-z0-9]*"))
+(allow file-read*  (path-regex #"^/dev/pty[a-z0-9]*"))
+(allow file-write* (path-regex #"^/dev/pty[a-z0-9]*"))
+(allow file-ioctl  (path-regex #"^/dev/pty[a-z0-9]*"))
+OUTER_SBPL_END
+fi
 
 # Run provided command inside Seatbelt sandbox (via sandbox-exec).
 # GVC_SEATBELT_SANDBOX=1 signals to tests that some capabilities are restricted.
-exec sandbox-exec -f "$SBPL" env GVC_SEATBELT_SANDBOX=1 "$@"
+# In outer mode, replace the symlink arg with the realpath so the shell executes
+# the binary directly with no further symlink resolution.
+if $OUTER_MODE; then
+    exec sandbox-exec -f "$SBPL" env GVC_SEATBELT_SANDBOX=1 "$RESOLVED_CLAUDE" "${@:2}"
+else
+    exec sandbox-exec -f "$SBPL" env GVC_SEATBELT_SANDBOX=1 "$@"
+fi

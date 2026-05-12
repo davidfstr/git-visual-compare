@@ -12,27 +12,55 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SBPL="$(mktemp /tmp/gvc-sandbox.XXXXXX)"
 trap 'rm -f "$SBPL"' EXIT
 
-# --- Mach IPC allowlist (generated) ---
-# Static names come from sandbox-com-apple-services.txt, enumerated once
-# via: launchctl print system/user/$UID/gui/$UID
-# The WebKit regex covers PID-suffixed dynamic names not in that snapshot.
-MACH_SERVICES="$SCRIPT_DIR/sandbox-com-apple-services.txt"
-
-cat > "$SBPL" << SBPL_MACH_OPEN
+cat > "$SBPL" << SBPL_END
 (version 1)
 
 ; --- Mach IPC ---
-; Upper-bound allowlist: all com.apple.* services visible at enumeration time
-; (sandbox-com-apple-services.txt) plus a regex for WebKit's runtime-
-; registered PID-suffixed names (com.apple.WebKit.GPU.<pid> etc.).
+; Minimal explicit allowlist determined by binary search over the full set of
+; com.apple.* services (enumerated via launchctl).
+; 
+; NOTE: WebKit's PID-suffixed sub-process names (com.apple.WebKit.GPU.<pid> etc.)
+; are not statically enumerable, so they are covered by a separate regex at the end.
 (allow mach-lookup
-SBPL_MACH_OPEN
-
-while IFS= read -r name; do
-  printf '  (global-name "%s")\n' "$name"
-done < "$MACH_SERVICES" >> "$SBPL"
-
-cat >> "$SBPL" << SBPL_MACH_CLOSE
+  (global-name "com.apple.accessibility.mediaaccessibilityd")
+  (global-name "com.apple.analyticsd")
+  (global-name "com.apple.appkit.restoration_storage")
+  (global-name "com.apple.audio.AudioComponentRegistrar")
+  (global-name "com.apple.bsd.dirhelper")
+  (global-name "com.apple.carboncore.csnameddata")
+  (global-name "com.apple.CARenderServer")
+  (global-name "com.apple.coreservices.appleevents")
+  (global-name "com.apple.CoreServices.coreservicesd")
+  (global-name "com.apple.coreservices.launchservicesd")
+  (global-name "com.apple.coreservices.quarantine-resolver")
+  (global-name "com.apple.cvmsServ")
+  (global-name "com.apple.diagnosticd")
+  (global-name "com.apple.DiskArbitration.diskarbitrationd")
+  (global-name "com.apple.dock.fullscreen")
+  (global-name "com.apple.dock.server")
+  (global-name "com.apple.hiservices-xpcservice")
+  (global-name "com.apple.iconservices")
+  (global-name "com.apple.iconservices.store")
+  (global-name "com.apple.logd")
+  (global-name "com.apple.lsd.mapdb")
+  (global-name "com.apple.lsd.modifydb")
+  (global-name "com.apple.nsurlsessiond")  ; hidden service; does NOT appear in sandbox deny log entries
+  (global-name "com.apple.pasteboard.1")
+  (global-name "com.apple.pluginkit.pkd")
+  (global-name "com.apple.PowerManagement.control")
+  (global-name "com.apple.system.notification_center")
+  (global-name "com.apple.system.opendirectoryd.libinfo")
+  (global-name "com.apple.system.opendirectoryd.membership")
+  (global-name "com.apple.tccd.system")
+  (global-name "com.apple.touchbarserver.mig")
+  (global-name "com.apple.tsm.uiserver")
+  (global-name "com.apple.uiintelligencesupport.agent")
+  (global-name "com.apple.ViewBridgeAuxiliary")
+  (global-name "com.apple.webprivacyd")
+  (global-name "com.apple.window_proxies")
+  (global-name "com.apple.windowmanager.server")
+  (global-name "com.apple.windowserver.active")
+  
   ; PID-suffixed WebKit sub-process names registered at runtime
   (global-name-regex #"^com\\.apple\\.WebKit\\.")
 )
@@ -182,7 +210,7 @@ cat >> "$SBPL" << SBPL_MACH_CLOSE
 (allow file-write* (subpath "$HOME/Library/WebKit/org.python.python")) ; Python WebKit storage
 ; Project directory (test outputs, .pytest_cache, etc.)
 (allow file-write* (subpath "$SCRIPT_DIR"))
-SBPL_MACH_CLOSE
+SBPL_END
 
 # Run provided command inside Seatbelt sandbox (via sandbox-exec).
 # GVC_SEATBELT_SANDBOX=1 signals to tests that some capabilities are restricted.

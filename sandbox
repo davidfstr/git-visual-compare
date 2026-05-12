@@ -72,6 +72,9 @@ cat > "$SBPL" << SBPL_END
 )
 
 ; --- Process ---
+; process-exec is allowed broadly: the file-read rules already constrain which
+; binaries are reachable (system, current-user, and project paths only), so a
+; separate exec allowlist would duplicate that boundary with no security gain.
 (allow process-exec)
 (allow process-fork)
 ; NOTE: Only needed by 1 test: test_when_gvc_run_in_terminal_given_no_gui_running_then_starts_gui_and_opens_new_diff_window

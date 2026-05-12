@@ -89,7 +89,6 @@ cat > "$SBPL" << SBPL_END
 ;   does not cause any tests to fail.
 
 ; --- Kernel / IOKit ---
-(allow iokit-open)
 (allow sysctl-read)
 
 ; --- Sockets ---

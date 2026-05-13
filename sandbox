@@ -273,7 +273,6 @@ if $OUTER_MODE; then
 ; Global Claude Code config and session state (~/.claude/)
 ; Distinct from the project-local $SCRIPT_DIR/.claude whose writes remain denied above.
 (allow file-read* (subpath "$HOME/.claude"))
-(allow file-write* (subpath "$HOME/.claude"))
 
 ; Auth file written by "claude login"
 (allow file-read*

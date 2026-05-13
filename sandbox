@@ -277,10 +277,21 @@ if $OUTER_MODE; then
 ; Auth file written by "claude login"
 (allow file-read*
   (literal "$HOME/.claude.json")
-  (literal "$HOME/.claude.json.backup"))
+  (literal "$HOME/.claude.json.backup")
+  (literal "$HOME/.claude.json.lock")
+  (path-regex #"^$HOME/\.claude\.json\.tmp\."))
 (allow file-write*
   (literal "$HOME/.claude.json")
-  (literal "$HOME/.claude.json.backup"))
+  (literal "$HOME/.claude.json.backup")
+  (literal "$HOME/.claude.json.lock")
+  (path-regex #"^$HOME/\.claude\.json\.tmp\."))
+
+; Conversation history and session state (written by Claude Code during sessions)
+(allow file-write*
+  (literal "$HOME/.claude/history.jsonl")
+  (subpath "$HOME/.claude/projects")
+  (subpath "$HOME/.claude/session-env")
+  (subpath "$HOME/.claude/sessions"))
 
 ; MCP server cache and logs (Node.js)
 (allow file-read* (subpath "$HOME/Library/Caches/claude-cli-nodejs"))

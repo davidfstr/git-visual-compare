@@ -7,10 +7,11 @@
 #   Outer sandbox — wraps the Claude Code process itself. Activated when the
 #     command is "claude" and resolves to the global Claude Code installation.
 #     Permits network (Anthropic API) and Claude Code's own config/data paths.
-#   Inner sandbox — wraps bash commands that Claude Code executes via its Bash
-#     tool. Denies network and limits file access to the project tree.
-#   When Claude Code (outer) spawns ./sandbox bash -c ... (inner), macOS
-#   Seatbelt intersects both policies, so inner restrictions always win.
+#   Inner sandbox — wraps gvc-related commands directly, when outer Claude Code
+#     process is not being used. Denies network and limits file access to the
+#     project tree.
+#   Seatbelt does not appear to allow nesting of sandboxes, so both outer and
+#   inner sandbox modes cannot be used at the same time.
 
 # If an error occurs abort the script
 set -euo pipefail

@@ -276,8 +276,7 @@ if $OUTER_MODE; then
 (allow file-read-metadata (literal "$HOME/.local/share"))
 
 ; Claude Code temp files (UID-specific dirs and other claude-* paths)
-(allow file-read* (path-regex #"^/private/tmp/claude-"))
-(allow file-write* (path-regex #"^/private/tmp/claude-"))
+(allow file-read* file-write* (path-regex #"^/private/tmp/claude-"))
 
 ; Global Claude Code config and session state (~/.claude/)
 ; Distinct from the project-local $SCRIPT_DIR/.claude whose writes remain denied above.
@@ -288,12 +287,7 @@ if $OUTER_MODE; then
 (allow file-read* (subpath "$HOME/.claude"))
 
 ; Auth file written by "claude login"
-(allow file-read*
-  (literal "$HOME/.claude.json")
-  (literal "$HOME/.claude.json.backup")
-  (literal "$HOME/.claude.json.lock")
-  (path-regex #"^$HOME/\.claude\.json\.tmp\."))
-(allow file-write*
+(allow file-read* file-write*
   (literal "$HOME/.claude.json")
   (literal "$HOME/.claude.json.backup")
   (literal "$HOME/.claude.json.lock")
@@ -307,8 +301,7 @@ if $OUTER_MODE; then
   (subpath "$HOME/.claude/sessions"))
 
 ; MCP server cache and logs (Node.js)
-(allow file-read* (subpath "$HOME/Library/Caches/claude-cli-nodejs"))
-(allow file-write* (subpath "$HOME/Library/Caches/claude-cli-nodejs"))
+(allow file-read* file-write* (subpath "$HOME/Library/Caches/claude-cli-nodejs"))
 
 ; Temp dir writes (Claude Code's Node.js runtime writes temp files here)
 (allow file-write* (path-regex #"^/private/var/folders/[^/]+/[^/]+/T(/|$)"))

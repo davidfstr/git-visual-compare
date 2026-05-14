@@ -342,7 +342,7 @@ if $OUTER_MODE; then
 (allow file-read*
   (literal "$HOME/Library/Keychains/login.keychain-db")
   (literal "/System/Library/Keychains/SystemTrustSettings.plist")
-  (subpath "/private/var/db/mds"))
+  (subpath "/private/var/db/mds/system"))
 (allow mach-lookup
   (global-name "com.apple.SecurityServer")
   (global-name "com.apple.securityd")

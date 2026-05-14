@@ -346,6 +346,10 @@ if $OUTER_MODE; then
   (path-regex #"^$HOME/Library/Preferences/ByHost/\\.GlobalPreferences\\..*\\.plist$"))
 
 ; Keychain infrastructure
+; NOTE: Unfortunately direct read access to the (thankfully encrypted)
+;       user keychain (login.keychain-db) is required to access Anthropic
+;       login credentials. Granting mach-lookups to the security services
+;       related to the keychain are not sufficient.
 (allow file-read-metadata
   (literal "/Library/Keychains")
   (literal "/Library/Keychains/System.keychain")

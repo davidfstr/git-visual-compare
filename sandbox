@@ -354,17 +354,20 @@ if $OUTER_MODE; then
 ; PTY/terminal: Claude Code uses xterm.js which requires PTY creation for its
 ; interactive terminal UI. Without this, escape sequences render raw.
 (allow pseudo-tty)
-(allow file-read* (literal "/dev/ptmx"))
-(allow file-write* (literal "/dev/ptmx"))
-(allow file-write* (literal "/dev/tty"))
-(allow file-ioctl (literal "/dev/tty"))
-(allow file-ioctl (literal "/dev/null"))
-(allow file-read*  (path-regex #"^/dev/tty[a-z0-9]*"))
-(allow file-write* (path-regex #"^/dev/tty[a-z0-9]*"))
-(allow file-ioctl  (path-regex #"^/dev/tty[a-z0-9]*"))
-(allow file-read*  (path-regex #"^/dev/pty[a-z0-9]*"))
-(allow file-write* (path-regex #"^/dev/pty[a-z0-9]*"))
-(allow file-ioctl  (path-regex #"^/dev/pty[a-z0-9]*"))
+(allow file-read* file-write* file-ioctl (literal "/dev/ptmx"))
+(allow file-read* file-write* file-ioctl (literal "/dev/tty"))
+(allow file-read* file-write*
+  (require-all
+    (regex #"^/dev/ttys[0-9]+")
+    (extension "com.apple.sandbox.pty")))
+; Allow ioctl on ALL ttys including ttys created from outside the sandbox
+; (which lack the "com.apple.sandbox.pty" extension). Ideally we'd only allow
+; ioctl on the particular tty that Claude Code creates, but we don't know
+; its number in advance.
+; NOTE: The powerful TIOCSTI (Simulate Terminal Input) ioctl thankfully cannot be
+;       used on a tty controlled by a different process, as enforced by the
+;       XNU kernel (bsd/kern/tty.c) regardless of Seatbelt policy.
+(allow file-ioctl (regex #"^/dev/ttys[0-9]+"))
 OUTER_SBPL_END
 fi
 

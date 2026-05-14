@@ -366,6 +366,10 @@ if $OUTER_MODE; then
   (global-name "com.apple.securityd.xpc"))
 
 ; FSEvents: Node.js file-change watching used by Claude Code internals
+; NOTE: FSEvents lets a process register watches on *any* path and receive 
+;       change notifications, even for paths it cannot read directly.
+;       Acceptable information leakage in exchange for Claude Code to not
+;       fall back to inefficient continuous filesystem polling.
 (allow mach-lookup (global-name "com.apple.FSEvents"))
 
 ; PTY/terminal: Claude Code uses xterm.js which requires PTY creation for its

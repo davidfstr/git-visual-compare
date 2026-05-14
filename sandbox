@@ -259,6 +259,15 @@ if $OUTER_MODE; then
 ; === Outer sandbox: Claude Code process ===
 
 ; Network: Claude Code requires outbound access to the Anthropic API
+; NOTE: Allows unrestricted outbound network communication.
+;       There is no way to make this outbound network access more fine-grained
+;       using Seatbelt policy. In particular we cannot limit
+;       - protocol types (e.g. only dns, http, https, quic),
+;       - URL hostnames (e.g. https://code.claude.com/), or
+;       - URL path prefixes (e.g. https://github.com/davidfstr/*).
+;       To provide those kinds of limits, we'd need to have an HTTP/SOCKS proxy
+;       outside the sandbox enforcing such restrictions and only mount a narrow
+;       Unix socket inside the sandbox to talk to the proxy.
 (allow network-outbound)
 
 ; Claude Code binary and bundled resources (~/.local/share/claude/versions/...)
@@ -272,6 +281,10 @@ if $OUTER_MODE; then
 
 ; Global Claude Code config and session state (~/.claude/)
 ; Distinct from the project-local $SCRIPT_DIR/.claude whose writes remain denied above.
+; NOTE: Allows an agent to read conversation history from *all* previous sessions,
+;       including sessions that were not sandboxed. Ideally we'd only provide
+;       access to conversation history from sandboxed sessions to prevent
+;       leak of data from outside the sandbox.
 (allow file-read* (subpath "$HOME/.claude"))
 
 ; Auth file written by "claude login"

@@ -259,7 +259,7 @@ if $OUTER_MODE; then
 ; === Outer sandbox: Claude Code process ===
 
 ; Network: Claude Code requires outbound access to the Anthropic API
-(allow network*)
+(allow network-outbound)
 
 ; Claude Code binary and bundled resources (~/.local/share/claude/versions/...)
 (allow file-read* (subpath "$HOME/.local/share/claude"))

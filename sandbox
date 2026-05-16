@@ -159,11 +159,13 @@ cat > "$SBPL" << BASE_SBPL_END
 ; Standard Unix + macOS system paths
 (allow file-read* (subpath "/bin"))
 (allow file-read* (subpath "/sbin"))
-(allow file-read* (subpath "/opt/homebrew/bin"))
+(allow file-read* (subpath "/opt/homebrew"))  ; Homebrew
 (allow file-read* (subpath "/opt/local/bin"))
 (allow file-read* (subpath "/opt/local/sbin"))
 (allow file-read* (subpath "/opt/local/lib"))
 (allow file-read* (literal "/dev"))         ; directory entry for ls/stat
+; NOTE: File descriptors can only be accessed by their owning process
+(allow file-read* (subpath "/dev/fd"))
 (allow file-read* (literal "/dev/null"))
 (allow file-read* (literal "/dev/stdin"))
 (allow file-read* (literal "/dev/stdout"))
@@ -230,6 +232,10 @@ cat > "$SBPL" << BASE_SBPL_END
 (allow file-read* (subpath "$HOME/.local/pipx/venvs")) ; poetry pipx venv
 (allow file-read* (literal "$HOME/.bash_profile"))  ; bash startup script
 (allow file-read* (literal "$HOME/.bashrc"))        ; bash startup script
+(allow file-read* (subpath "$HOME/.cargo"))         ; cargo
+(allow file-read* (subpath "$HOME/.config/gh"))     ; gh
+(allow file-read* (subpath "$HOME/.config/git"))    ; git
+(allow file-read* (subpath "$HOME/.gitconfig"))     ; git
 ; Project source + .venv
 (allow file-read* (subpath "$SCRIPT_DIR"))
 

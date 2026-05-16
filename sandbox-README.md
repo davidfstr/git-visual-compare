@@ -49,10 +49,16 @@ The inner sandbox notably does not allow any network communication except to loc
       exfiltrated to an attacker-controlled remote server. Regular gvc
       development does not involve any sensitive data.
 
-- No authenticated GitHub access
+- No authenticated GitHub access (By Design)
     - SSH keys for connecting to GitHub.com are NOT readable from inside the sandbox.
       In fact no ~/.ssh access of any kind is granted.
       Therefore you must `git push` from outside the sandbox. Claude cannot push itself.
+
+- No writable Claude Code settings (By Design)
+    - Changing the model (`/model`) or effort level (`/effort`) within
+      a sandboxed Claude Code will not work.
+        - Workaround with `/exit`, relaunch unsandboxed, run `/model` or `/effort`, 
+          `/exit` again, relaunch sandboxed.
 
 ## Security Model
 

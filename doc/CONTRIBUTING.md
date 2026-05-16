@@ -106,3 +106,10 @@ ln -s "$(pwd)/dist/gvc.app/Contents/MacOS/gvc" /usr/local/bin/gvc
 
 The symlink survives rebuilds (the executable path inside the `.app` is
 stable), so you only need to create it once.
+
+### Claude Code Sandboxing
+
+If you are developing using Claude Code, consider using the custom
+sandbox built for gvc and Claude Code, at [sandbox-README.md](../sandbox-README.md).
+With that sandbox enabled you don't need to manually approve any permission prompts;
+all potentially unsafe actions are denied automatically.

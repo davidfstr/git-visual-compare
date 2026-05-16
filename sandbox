@@ -308,9 +308,13 @@ if $OUTER_MODE; then
   (subpath "$HOME/.claude/session-env")
   (subpath "$HOME/.claude/sessions"))
 
-; Plans (written by Claude Code during sessions)
+; Plans (written by Claude Code's /plan mode during sessions)
 (allow file-write*
   (subpath "$HOME/.claude/plans"))
+
+; Tasks (written by Claude Code's Task tool during sessions)
+(allow file-write*
+  (subpath "$HOME/.claude/tasks"))
 
 ; MCP server cache and logs (Node.js)
 (allow file-read* file-write* (subpath "$HOME/Library/Caches/claude-cli-nodejs"))

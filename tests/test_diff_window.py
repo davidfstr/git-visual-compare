@@ -249,11 +249,11 @@ def test_when_reviewed_checkbox_unchecked_then_section_expands(
         section = page.locator("#file-0")
 
         # Check (collapses)
-        page.locator("#file-0 > summary .reviewed-check").evaluate("el => el.click()")
+        page.locator("#file-0 > summary .reviewed-check").click()
         expect(section).not_to_have_attribute("open")
 
         # Uncheck (expands)
-        page.locator("#file-0 > summary .reviewed-check").evaluate("el => el.click()")
+        page.locator("#file-0 > summary .reviewed-check").click()
         expect(section).to_have_attribute("open", "")
 
     # Click the label element itself (outside the checkbox)
@@ -263,11 +263,11 @@ def test_when_reviewed_checkbox_unchecked_then_section_expands(
         section = page.locator("#file-0")
 
         # Check (collapses)
-        page.locator("#file-0 > summary .reviewed-label").evaluate("el => el.click()")
+        page.locator("#file-0 > summary .reviewed-label").click()
         expect(section).not_to_have_attribute("open")
 
         # Uncheck (expands)
-        page.locator("#file-0 > summary .reviewed-label").evaluate("el => el.click()")
+        page.locator("#file-0 > summary .reviewed-label").click()
         expect(section).to_have_attribute("open", "")
 
 

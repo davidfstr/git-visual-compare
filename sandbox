@@ -159,6 +159,7 @@ cat > "$SBPL" << BASE_SBPL_END
 ; Standard Unix + macOS system paths
 (allow file-read* (subpath "/bin"))
 (allow file-read* (subpath "/sbin"))
+(allow file-read* (subpath "/opt/homebrew/bin"))
 (allow file-read* (subpath "/opt/local/bin"))
 (allow file-read* (subpath "/opt/local/sbin"))
 (allow file-read* (subpath "/opt/local/lib"))

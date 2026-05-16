@@ -228,7 +228,8 @@ cat > "$SBPL" << BASE_SBPL_END
 (allow file-read* (subpath "$HOME/Library/Application Support/pypoetry")) ; poetry config
 (allow file-read* (subpath "$HOME/.local/bin"))        ; poetry symlink
 (allow file-read* (subpath "$HOME/.local/pipx/venvs")) ; poetry pipx venv
-(allow file-read* (literal "$HOME/.gitconfig"))        ; git reads this on every invocation
+(allow file-read* (literal "$HOME/.bash_profile"))  ; bash startup script
+(allow file-read* (literal "$HOME/.bashrc"))        ; bash startup script
 ; Project source + .venv
 (allow file-read* (subpath "$SCRIPT_DIR"))
 

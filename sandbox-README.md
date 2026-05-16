@@ -7,6 +7,31 @@ Any actions not deemed to be safe are automatically denied by the sandbox.
 
 ## Installation
 
+### Shell Startup File: Move out secrets
+
+Inspect your shell startup file to see if they contain any secrets in environment variables.
+Move any secrets to separate files that are included by your main shell startup file:
+
+```
+# .bash_profile
+source .bashrc
+```
+
+```
+# .bashrc
+source .bashrc_secrets  # 👈 move secrets out of the main shell startup files
+
+echo PATH="$HOME/bin:$PATH"  # for example
+```
+
+```
+# .bashrc_secrets
+echo AWS_ACCESS_KEY_ID=...
+echo AWS_SECRET_ACCESS_KEY=...
+```
+
+### Agents File: Notify that sandbox is active
+
 Recommend that you add the following to your `CLAUDE.md` or `AGENTS.md`:
 ```
 **Sandboxed**: All your tool calls in this session (Bash, Read, Write, etc)
@@ -75,6 +100,10 @@ following (valuable) resources:
     - All users' data (❌ no access, with a few exceptions below)
         - Filesystem change notifications via FSEvents (🔍 read-only in Outer Mode)
     - Current user data (❌ no access, with several exceptions below)
+        - bash startup scripts at ~/.bash_profile and ~/.bashrc (🔍 read-only)
+            - Necessary to discover $PATH customizations
+            - Assumes any secret environment variables have been moved to
+              other script files, as mentioned in §Installation above
         - Claude Code configuration at ~/.claude
           (🔍 read-only in Outer Mode, with a few exceptions below)
             - Claude Code conversation history, session state, and plans,

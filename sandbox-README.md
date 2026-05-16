@@ -77,7 +77,7 @@ following (valuable) resources:
     - Current user data (❌ no access, with several exceptions below)
         - Claude Code configuration at ~/.claude
           (🔍 read-only in Outer Mode, with a few exceptions below)
-            - Claude Code conversation history & session state,
+            - Claude Code conversation history, session state, and plans,
               including non-sandboxed sessions (✏️ READ-WRITE)
             - Claude Code subscription/API key at ~/.claude.json (✏️ READ-WRITE)
         - Keychain data at ~/Library/Keychains (🔍 read-only in Outer Mode)

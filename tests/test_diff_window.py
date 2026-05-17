@@ -4,7 +4,7 @@ visible controls have the expected behavior.
 """
 
 from contextlib import closing
-from gvc import window_manager
+from gvc import window_manager  # type: ignore[attr-defined]  # mypy cannot see for some reason
 from harness.app import GvcApp
 from harness.diff_fixture import DiffFixture, EXPECTED_FILES, make_empty_file_diff_fixture, make_large_diff_fixture
 from harness.playwrightkit import Page, expect

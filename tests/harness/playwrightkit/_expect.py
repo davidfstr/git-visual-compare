@@ -36,19 +36,21 @@ class LocatorAssertions:
         )
 
     def to_have_text(self, text: str) -> None:
+        check: Callable[[str], bool] = lambda v: _normalize_ws(v) == _normalize_ws(text)
         self._retry(
             predicate=lambda: (
                 self._locator.text_content() or "",
-                lambda v: _normalize_ws(v) == _normalize_ws(text),
+                check,
             ),
             describe=lambda v: f"expected text {text!r}, got {v!r}",
         )
 
     def to_contain_text(self, text: str) -> None:
+        check: Callable[[str], bool] = lambda v: text in v
         self._retry(
             predicate=lambda: (
                 self._locator.text_content() or "",
-                lambda v: text in v,
+                check,
             ),
             describe=lambda v: f"expected text to contain {text!r}, got {v!r}",
         )
@@ -120,19 +122,21 @@ class LocatorAssertions:
         )
 
     def not_to_have_text(self, text: str) -> None:
+        check: Callable[[str], bool] = lambda v: _normalize_ws(v) != _normalize_ws(text)
         self._retry(
             predicate=lambda: (
                 self._locator.text_content() or "",
-                lambda v: _normalize_ws(v) != _normalize_ws(text),
+                check,
             ),
             describe=lambda v: f"expected text != {text!r}, got {v!r}",
         )
 
     def not_to_contain_text(self, text: str) -> None:
+        check: Callable[[str], bool] = lambda v: text not in v
         self._retry(
             predicate=lambda: (
                 self._locator.text_content() or "",
-                lambda v: text not in v,
+                check,
             ),
             describe=lambda v: f"expected text to not contain {text!r}, got {v!r}",
         )

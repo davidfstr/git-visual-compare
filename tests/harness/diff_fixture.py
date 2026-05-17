@@ -93,9 +93,13 @@ def make_large_diff_fixture() -> DiffFixture:
     run("git", "config", "user.name", "Test")
     run("git", "commit", "--quiet", "--message", "initial", "--allow-empty")
 
-    # Add a file with enough lines to cross the 10,000-line large-diff threshold
+    # Add a file with enough lines to cross the 10,000-line large-diff threshold,
+    # plus a couple of small companion files so the diff has >=3 file rows
+    # (needed by tests that exercise outline-row reordering after gate reveal).
     big_text = "\n".join(f"line {i:05d}" for i in range(11_000)) + "\n"
     (repo / "big.py").write_text(big_text)
+    (repo / "small_a.py").write_text("a\n")
+    (repo / "small_b.py").write_text("b\n")
     run("git", "add", "--all")
     run("git", "commit", "--quiet", "--message", "add big file")
 

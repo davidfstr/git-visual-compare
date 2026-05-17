@@ -201,6 +201,33 @@ a { color: inherit; text-decoration: none; }
 
 .outline-ctrl-btn:hover { background: var(--outline-hover); }
 
+.outline-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.outline-row.dragging { opacity: 0.4; }
+
+.outline-handle {
+  font-family: var(--font-family);
+  font-size: 12px;
+  line-height: 1;
+  padding: 1px 4px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--hunk-fg);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 0;
+}
+
+.outline-handle:hover { background: var(--outline-hover); }
+.outline-handle:focus { outline: 2px solid var(--find-toggle-active-bg); outline-offset: -1px; }
+.outline-handle:active { cursor: grabbing; }
+
 .outline-file {
   display: block;
   font-size: 12px;
@@ -209,12 +236,61 @@ a { color: inherit; text-decoration: none; }
   padding: 1px 4px;
   border-radius: 3px;
   line-height: 1.6;
+  flex: 1;
+  min-width: 0;
 }
 
 .outline-file:hover { background: var(--outline-hover); }
 
 .outline-status {
   margin-right: 4px;
+}
+
+/* Reorder dropdown menu (opened via right-click or Space on handle) */
+.reorder-menu {
+  position: absolute;
+  z-index: 1000;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  min-width: 220px;
+  background: var(--outline-bg);
+  border: 1px solid var(--outline-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  /* Use the system UI font to match native macOS menus */
+  font-size: 13px;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  color: var(--fg);
+}
+
+.reorder-menu li[role="menuitem"] {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 4px 14px;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.reorder-menu li[role="menuitem"]:hover,
+.reorder-menu li[role="menuitem"]:focus {
+  background: var(--find-toggle-active-bg);
+  color: #fff;
+  outline: none;
+}
+
+.reorder-menu li[role="menuitem"]:hover .menu-shortcut,
+.reorder-menu li[role="menuitem"]:focus .menu-shortcut {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.reorder-menu .menu-shortcut {
+  color: var(--hunk-fg);
+  font-size: 13px;
+  letter-spacing: 0.05em;
 }
 
 .reviewed-label {

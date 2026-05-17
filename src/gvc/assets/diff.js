@@ -1,7 +1,7 @@
 // @ts-check
 "use strict";
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // State
 
 const find = {
@@ -14,7 +14,7 @@ const find = {
     current: -1,
 };
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Init
 
 // Wait for pywebview bridge
@@ -33,19 +33,20 @@ document.addEventListener("DOMContentLoaded", () => {
     _setupFindBar();
     _setupCopy();
     _setupOutlineLinks();
-    
+    setupReorder();
+
     // Setup listeners on diff content
     _setupWhenSectionCollapseThenScrollBackIntoView(document);
 });
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Font Size
 
 function applyFontSize(/** @type {number} */ size) {
     document.documentElement.style.setProperty("--font-size", size + "px");
 }
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Keyboard Shortcuts
 
 function _setupKeyboard() {
@@ -95,7 +96,7 @@ function _setupKeyboard() {
     });
 }
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Font Size Change
 
 async function changeFontSize(/** @type {number} */ delta) {
@@ -109,7 +110,7 @@ async function changeFontSize(/** @type {number} */ delta) {
     } catch (e) { /* standalone browser */ }
 }
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Reviewed Checkboxes
 
 function onReviewedLabelClick(/** @type {MouseEvent} */ e, /** @type {number} */ fileIdx) {
@@ -131,7 +132,7 @@ function onReviewedLabelClick(/** @type {MouseEvent} */ e, /** @type {number} */
     section.open = !checked;
 }
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Collapse / Expand All
 
 function setAllSections(/** @type {boolean} */ open) {
@@ -152,7 +153,7 @@ function _setupWhenSectionCollapseThenScrollBackIntoView(/** @type {Document | E
     });
 }
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Outline Navigation
 
 function _setupOutlineLinks() {
@@ -170,7 +171,7 @@ function _setupOutlineLinks() {
     });
 }
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Find Bar
 
 function _setupFindBar() {
@@ -249,7 +250,7 @@ function _closeFindBar() {
     find.current = -1;
 }
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Find Implementation
 
 function _runFind() {
@@ -399,7 +400,7 @@ function _findStep(/** @type {number} */ direction, /** @type {boolean} */ suppr
     }
 }
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Wrap-Around Flash Overlay
 
 /** @type {ReturnType<typeof setTimeout> | null} */
@@ -423,7 +424,7 @@ function _flashWrapOverlay() {
     }, 800);
 }
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Copy
 
 function _setupCopy() {
@@ -456,7 +457,7 @@ function _buildClipboardText(/** @type {Selection} */ selection) {
     return fragment.textContent;
 }
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Large Diff Gate
 
 function revealFullDiff() {
@@ -473,6 +474,7 @@ function revealFullDiff() {
     
     // Setup listeners on diff content
     _setupWhenSectionCollapseThenScrollBackIntoView(content);
+    setupReorder();
 }
 
-// -------------------------------------------------------
+// -----------------------------------------------------------------------------

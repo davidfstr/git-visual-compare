@@ -70,11 +70,11 @@ def _wait_for_page_init_to_apply_font_size(page: Page, timeout: float = 5.0) -> 
 
 
 def _read_font_size(page: Page) -> int:
-    size = page.evaluate(
-        "() => parseFloat("
-        "  getComputedStyle(document.documentElement).getPropertyValue('--font-size')"
-        ") || 13"
-    )
+    size = page.evaluate("""
+        () => parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue('--font-size')
+        ) || 13
+    """)
     assert isinstance(size, (int, float))
     return int(size)
 
@@ -284,12 +284,10 @@ def _assert_find_step_advances(
 
 def _current_mark_index(page: Page) -> int:
     """Index of the `mark.find-current` within all `mark.find-match`, or -1."""
-    idx = page.evaluate(
-        "() => {"
-        "const marks = Array.from(document.querySelectorAll('mark.find-match'));"
-        "return marks.findIndex(m => m.classList.contains('find-current'));"
-        "}"
-    )
+    idx = page.evaluate("""() => {
+        const marks = Array.from(document.querySelectorAll('mark.find-match'));
+        return marks.findIndex(m => m.classList.contains('find-current'));
+    }""")
     assert isinstance(idx, int)
     return idx
 

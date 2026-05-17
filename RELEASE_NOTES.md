@@ -6,6 +6,8 @@ Release Notes
 * Code review tools
     * File section headers now have a "[ ] Reviewed" checkbox.
       Checking it collapses the section; unchecking it expands the section.
+    * Files in the Table of Contents can now be reordered,
+      so that files can be reviewed in an intentional order
 
 * Usability improvements
     * Collapsing a file section (via its header or the Reviewed checkbox) now

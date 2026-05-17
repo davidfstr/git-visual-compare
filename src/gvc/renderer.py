@@ -77,9 +77,14 @@ def _render_outline(file_diffs: list["FileDiff"]) -> str:
         status_icon, status_label, file_path = _diff_header(fd)
         file_path_e = _e(file_path)
         parts.append(
-            f'<a class="outline-file" href="#file-{idx}" title="{status_label}: {file_path_e}">'
-                f'<span class="outline-status">{status_icon}</span>{file_path_e}'
-            f'</a>'
+            f'<div class="outline-row" data-file-idx="{idx}">'
+                f'<button class="outline-handle" type="button" '
+                    f'aria-haspopup="menu" aria-label="Reorder" title="Reorder" '
+                    f'draggable="true">☰</button>'
+                f'<a class="outline-file" href="#file-{idx}" title="{status_label}: {file_path_e}">'
+                    f'<span class="outline-status">{status_icon}</span>{file_path_e}'
+                f'</a>'
+            f'</div>'
         )
     return "\n".join(parts)
 
@@ -181,10 +186,13 @@ def _render_file(fd: FileDiff, idx: int) -> str:
 # ------------------------------------------------------------------------------
 # Utility: Asset Loading
 
+_JS_FILES = ("diff.js", "diff-reorder.js")
+
+
 @cache
 def _assets() -> tuple[str, str, str]:
     _CSS = _load_asset("diff.css")
-    _JS = _load_asset("diff.js")
+    _JS = "\n\n".join(_load_asset(name) for name in _JS_FILES)
     _HTML_TEMPLATE = _load_asset("diff.html")
     return _CSS, _JS, _HTML_TEMPLATE
 

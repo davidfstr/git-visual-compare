@@ -1,7 +1,11 @@
-from typing import Any, TYPE_CHECKING
+from typing import Any, Literal, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from harness.playwrightkit._page import Page
+
+
+type MouseButton = Literal["left", "right"]
+type KeyboardModifier = Literal["Alt", "Control", "Meta", "Shift"]
 
 
 class Locator:
@@ -89,8 +93,27 @@ class Locator:
 
     # === Actions ===
 
-    def click(self) -> None:
-        self._page._op("click", self._chain)
+    def click(
+        self,
+        *,
+        button: MouseButton = "left",
+        modifiers: list[KeyboardModifier] | None = None,
+    ) -> None:
+        """
+        Click the matched element.
+
+        With default arguments this delegates to `Element.click()` so that
+        focus/activation semantics match a real left-click. When `button` or
+        `modifiers` are specified, the click is synthesized via dispatched
+        MouseEvents (mousedown, mouseup, click or contextmenu as appropriate)
+        with the matching button index and modifier flags.
+
+        On macOS, both right-click and Control+left-click open the context
+        menu — this method dispatches `contextmenu` in either case to mimic
+        that platform behavior.
+        """
+        arg: dict[str, Any] = {"button": button, "modifiers": modifiers or []}
+        self._page._op("click", self._chain, arg)
 
     def fill(self, text: str) -> None:
         """Sets the element's value and fires an input event, like Playwright's fill()."""

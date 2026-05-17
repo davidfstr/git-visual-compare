@@ -61,6 +61,15 @@ class LocatorAssertions:
             describe=lambda v: f"expected visible, got is_visible={v}",
         )
 
+    def to_be_focused(self) -> None:
+        self._retry(
+            predicate=lambda: (
+                self._locator._page._op("isFocused", self._locator._chain),
+                lambda v: v is True,
+            ),
+            describe=lambda v: f"expected to be focused, got is_focused={v}",
+        )
+
     def to_be_in_viewport(self, ratio: float | None = None) -> None:
         """
         Asserts that the element's bounding rect intersects the viewport.
@@ -145,6 +154,15 @@ class LocatorAssertions:
         self._retry(
             predicate=lambda: (self._locator.is_visible(), lambda v: v is False),
             describe=lambda v: f"expected not visible, got is_visible={v}",
+        )
+
+    def not_to_be_focused(self) -> None:
+        self._retry(
+            predicate=lambda: (
+                self._locator._page._op("isFocused", self._locator._chain),
+                lambda v: v is False,
+            ),
+            describe=lambda v: f"expected not to be focused, got is_focused={v}",
         )
 
     def not_to_be_in_viewport(self, ratio: float | None = None) -> None:

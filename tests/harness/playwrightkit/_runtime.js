@@ -108,8 +108,40 @@
                     case 'click': {
                         var el = resolveOne(chain);
                         if (el === null) throw new Error('click: no matching element');
-                        el.click();
+                        var opts = arg || {};
+                        var mods = opts.modifiers || [];
+                        var rightBtn = opts.button === 'right';
+                        var ctrlKey = mods.indexOf('Control') !== -1;
+                        // Plain left-click with no modifiers: use el.click() so
+                        // that focus/activation semantics match the prior behavior.
+                        if (!rightBtn && mods.length === 0) {
+                            el.click();
+                            return null;
+                        }
+                        var eventInit = {
+                            bubbles: true, cancelable: true,
+                            button: rightBtn ? 2 : 0,
+                            ctrlKey: ctrlKey,
+                            shiftKey: mods.indexOf('Shift') !== -1,
+                            altKey:   mods.indexOf('Alt') !== -1,
+                            metaKey:  mods.indexOf('Meta') !== -1,
+                        };
+                        el.dispatchEvent(new MouseEvent('mousedown', eventInit));
+                        el.dispatchEvent(new MouseEvent('mouseup', eventInit));
+                        // Right-button mouseups don't trigger a click event in real browsers.
+                        if (!rightBtn) {
+                            el.dispatchEvent(new MouseEvent('click', eventInit));
+                        }
+                        // On macOS, right-click AND Control+left-click both open the
+                        // context menu. gvc is macOS-only, so we mimic that here.
+                        if (rightBtn || ctrlKey) {
+                            el.dispatchEvent(new MouseEvent('contextmenu', eventInit));
+                        }
                         return null;
+                    }
+                    case 'isFocused': {
+                        var el = resolveOne(chain);
+                        return el !== null && el === document.activeElement;
                     }
                     case 'fill': {
                         var el = resolveOne(chain);

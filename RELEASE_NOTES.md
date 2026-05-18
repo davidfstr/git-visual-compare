@@ -6,7 +6,7 @@ Release Notes
 * Code review tools
     * File section headers now have a "[ ] Reviewed" checkbox.
       Checking it collapses the section; unchecking it expands the section.
-    * Files in the Table of Contents can now be reordered,
+    * Files in the file outline can now be reordered,
       so that files can be reviewed in an intentional order
 
 * Usability improvements
@@ -17,7 +17,7 @@ Release Notes
 
 * Usability improvements
     * Selecting text in a diff to copy no longer includes line numbers
-    * Clicking a file in the Table of Contents now expands its content if
+    * Clicking a file in the file outline now expands its content if
       collapsed
     * "Wrap Around" overlay shown when Find wraps is now more readable,
       with a rounded rectangle background and a larger ⟳ icon
@@ -54,7 +54,7 @@ Release Notes
     * Text file diffs, supporting all the options that `git diff` does
     * Dark mode and light mode support
     * Find / Find Again, to search diffs
-    * Table of contents of files at top of diff window
+    * Outline of files at top of diff window
     * Collapsible file sections
     * App icon/logo
     * 100% human-reviewed code, although drafted with assistance from

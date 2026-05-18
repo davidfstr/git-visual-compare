@@ -1,5 +1,5 @@
 """
-Tests for reordering file rows in the outline (table of contents).
+Tests for reordering file rows in the file outline.
 
 The default `diff_fixture` produces 5 file rows (added, deleted, modified,
 renamed, binary) — comfortably more than the >= 3 rows these tests require.

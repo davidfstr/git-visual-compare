@@ -21,7 +21,7 @@ Most visual diff tools fall into one of two camps: GUI diff apps limited to look
 - Light and dark mode
 - Find (Cmd+F)
 - Adjustable font size (Cmd+Plus / Cmd+Minus)
-- Table of contents to jump to any file
+- File outline to jump to any file
 - Collapsible file sections with expand/collapse all
 
 ## Installation

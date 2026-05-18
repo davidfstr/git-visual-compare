@@ -20,7 +20,7 @@ class DiffFixture:
         shutil.rmtree(self.repo, ignore_errors=True)
 
 
-# Files emitted, keyed by the status icon they produce in the rendered TOC
+# Files emitted, keyed by the status icon they produce in the rendered outline
 EXPECTED_FILES: dict[str, str] = {
     "➕": "added.py",
     "❌": "deleted.py",

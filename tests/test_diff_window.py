@@ -109,10 +109,7 @@ def _expect_css_var(page: Page, var: str, expected: str, timeout: float = 5.0) -
     raise AssertionError(f"CSS var {var!r}: expected {expected!r}, got {actual!r}")
 
 
-# === Test: Table of Contents ===
-
-# TODO: Readme calls this "table of contents" but code calls this feature "outline".
-#       Pick a term and use it consistently everywhere.
+# === Test: File Outline ===
 
 def test_given_diff_window_visible_then_shows_added_and_deleted_and_modified_and_renamed_and_binary_files_with_correct_icons_and_paths(
     gvc_app: GvcApp,
@@ -138,7 +135,7 @@ def test_given_diff_window_visible_then_shows_added_and_deleted_and_modified_and
     assert actual == EXPECTED_FILES
 
 
-def test_when_file_in_toc_clicked_then_scrolls_diff_of_file_into_view(
+def test_when_file_in_outline_clicked_then_scrolls_diff_of_file_into_view(
     gvc_app: GvcApp,
     diff_fixture: DiffFixture,
 ) -> None:
@@ -148,7 +145,7 @@ def test_when_file_in_toc_clicked_then_scrolls_diff_of_file_into_view(
     # Scroll the diff container to the top so later sections are below the fold
     page.evaluate("() => document.getElementById('diff-content').scrollTo(0, 0)")
 
-    # The last TOC entry's target file section should be out of view before click
+    # The last outline entry's target file section should be out of view before click
     last_entry = page.locator("#file-outline .outline-file").last
     href = last_entry.get_attribute("href")
     assert href is not None and href.startswith("#"), \
@@ -160,7 +157,7 @@ def test_when_file_in_toc_clicked_then_scrolls_diff_of_file_into_view(
     expect(target).to_be_in_viewport()
 
 
-def test_when_file_in_toc_clicked_given_file_section_collapsed_then_section_expands(
+def test_when_file_in_outline_clicked_given_file_section_collapsed_then_section_expands(
     gvc_app: GvcApp,
     diff_fixture: DiffFixture,
 ) -> None:
@@ -174,7 +171,7 @@ def test_when_file_in_toc_clicked_given_file_section_collapsed_then_section_expa
     section.locator("summary").click()
     expect(section).not_to_have_attribute("open")
 
-    # Click its TOC entry. Should expand the section.
+    # Click its outline entry. Should expand the section.
     first_entry = page.locator("#file-outline .outline-file").first
     first_entry.click()
     expect(section).to_have_attribute("open", "")

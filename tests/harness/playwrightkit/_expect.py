@@ -122,6 +122,15 @@ class LocatorAssertions:
             describe=lambda v: f"expected class {class_name!r} in {v!r}",
         )
 
+    def to_be_checked(self) -> None:
+        self._retry(
+            predicate=lambda: (
+                self._locator._page._op("isChecked", self._locator._chain),
+                lambda v: v is True,
+            ),
+            describe=lambda v: f"expected checked, got is_checked={v}",
+        )
+
     # === Negated ===
 
     def not_to_have_count(self, count: int) -> None:
@@ -199,6 +208,15 @@ class LocatorAssertions:
                 lambda v: isinstance(v, list) and class_name not in v,
             ),
             describe=lambda v: f"expected class {class_name!r} not in {v!r}",
+        )
+
+    def not_to_be_checked(self) -> None:
+        self._retry(
+            predicate=lambda: (
+                self._locator._page._op("isChecked", self._locator._chain),
+                lambda v: v is False,
+            ),
+            describe=lambda v: f"expected not checked, got is_checked={v}",
         )
 
     # === Utility ===

@@ -143,6 +143,10 @@
                         var el = resolveOne(chain);
                         return el !== null && el === document.activeElement;
                     }
+                    case 'isChecked': {
+                        var el = resolveOne(chain);
+                        return el !== null && el.checked === true;
+                    }
                     case 'fill': {
                         var el = resolveOne(chain);
                         if (el === null) throw new Error('fill: no matching element');

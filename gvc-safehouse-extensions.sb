@@ -1,0 +1,140 @@
+;; -----------------------------------------------------------------------------
+;; gvc Safehouse profile extension
+;;
+;; Usage: always invoke via ./sandbox, never directly with safehouse.
+;; ./sandbox defines a SCRIPT_DIR variable this profile depends on.
+;;
+;; This file adds rules that safehouse's default profile and --enable=macos-gui
+;; do NOT cover:
+;; - WebKit child-process bootstrap,
+;; - gvc-specific file paths outside the workdir, and 
+;; - a tightened network policy.
+;; 
+;; Debug sandbox denials (examples):
+;;   /usr/bin/log stream --style compact --predicate 'eventMessage CONTAINS "Sandbox:" AND eventMessage CONTAINS "deny("'
+;;   /usr/bin/log stream --style compact --info --debug --predicate '(processID == 0) AND (senderImagePath CONTAINS "/Sandbox")'
+;; 
+;; Compare sandbox denials with the complete *.sb policy:
+;;   ./sandbox --stdout > gvc-sandbox-policy.sb
+;; 
+;; This file is formatted in a style consistent with Agent Safehouse *.sb profiles.
+;; -----------------------------------------------------------------------------
+
+;; -----------------------------------------------------------------------------
+;; WebKit child-process bootstrap (WKWebView GPU / Network / WebContent)
+;;
+;; WKWebView spawns helper processes whose mach service names carry a
+;; per-PID suffix registered at runtime — so they cannot be statically
+;; enumerated and must be matched by regex.
+;; -----------------------------------------------------------------------------
+
+(allow mach-lookup
+    (global-name-regex #"^com\.apple\.WebKit\."))
+
+(allow mach-register
+    (global-name-regex #"^com\.apple\.WebKit\."))
+
+;; The parent process needs to hand sandbox capabilities down to each
+;; WebKit helper via these extension classes.
+(allow mach-issue-extension
+    (extension-class "com.apple.webkit.extension.mach"))
+(allow generic-issue-extension
+    (extension-class "com.apple.webkit.mach-bootstrap"))
+
+;; -----------------------------------------------------------------------------
+;; Additional mach services not covered by macos-gui
+;;
+;; Observed in the legacy ./sandbox allowlist. Each was either logged as
+;; denied or surfaced via binary-search enumeration during prior tuning.
+;; -----------------------------------------------------------------------------
+
+(allow mach-lookup
+    (global-name "com.apple.audio.AudioComponentRegistrar")  ;; AudioToolbox init
+    (global-name "com.apple.carboncore.csnameddata")         ;; CarbonCore named-data store
+    (global-name "com.apple.cvmsServ")                       ;; CoreVideo / shader compile service
+    (global-name "com.apple.iconservices.store")             ;; icon caches (companion to iconservices)
+    (global-name "com.apple.pluginkit.pkd")                  ;; PlugInKit broker (WebKit / NSExtension hosts)
+    (global-name "com.apple.PowerManagement.control")        ;; power-assertion API
+    (global-name "com.apple.nsurlsessiond")                  ;; URLSession background daemon (hidden; not in deny log)
+    (global-name "com.apple.webprivacyd"))                   ;; WebKit privacy daemon; harmless if absent
+
+;; -----------------------------------------------------------------------------
+;; gvc-specific file paths
+;;
+;; Safehouse's workdir grant already covers the project tree
+;; (read+write under /Users/davidf/Projects/git-visual-compare), and its
+;; baseline rules cover /private/tmp and /private/var/folders — so gvc's
+;; Unix-socket and temp-file paths (/private/tmp/gvc-*, *.gvc) need no
+;; extra rules.
+;;
+;; What is NOT covered by default: per-app WebKit storage and the gvc
+;; runtime log directory under $HOME/Library.
+;; -----------------------------------------------------------------------------
+
+;; Poetry symlink under ~/.local/bin. Safehouse's python toolchain profile
+;; explicitly allows only `uv` and `uvx` in this directory, so the poetry
+;; entrypoint must be added here for execve() to succeed.
+(allow file-read*
+    (home-literal "/.local/bin/poetry"))
+
+(allow file-read* file-write*
+    (home-subpath "/Library/WebKit/net.dafoster.gvc")  ;; gvc app's WKWebView storage
+    (home-subpath "/Library/WebKit/org.python.python") ;; Python-bundle WKWebView storage
+    (home-subpath "/Library/Caches/org.python.python") ;; Python bytecode cache (Apple-domain)
+    (home-subpath "/Library/Caches/com.apple.python")  ;; system Python cache (read also needed at startup)
+    (home-subpath "/Library/Logs/gvc"))                ;; gvc GUI server log file
+
+;; -----------------------------------------------------------------------------
+;; Network
+;;
+;; safehouse's 20-network.sb sets `(allow network*)` and `(allow system-socket)`
+;; broadly for "reliable agent operation". gvc's tests don't need that breadth,
+;; so revoke and re-allow only what's actually used. This mirrors the legacy
+;; ./sandbox-legacy/sandbox network section.
+;; -----------------------------------------------------------------------------
+
+(deny system-socket)
+(deny network*)
+
+;; AF_SYSTEM routing socket (network stack init).
+(allow system-socket
+    (require-all (socket-domain AF_SYSTEM) (socket-protocol 2)))
+;; AF_UNIX for gvc's CLI↔GUI IPC and test harness control.
+(allow system-socket (socket-domain AF_UNIX))
+
+;; General outbound TCP/UDP egress, so that Claude Code can reach the Anthropic API
+;; NOTE: Allows unrestricted outbound TCP/UDP network communication.
+;;       There is no way to make this outbound network access more fine-grained
+;;       using Seatbelt policy. In particular we cannot limit
+;;       - protocol types (e.g. only dns, http, https, quic),
+;;       - URL hostnames (e.g. https://code.claude.com/), or
+;;       - URL path prefixes (e.g. https://github.com/davidfstr/*).
+;;       To provide those kinds of limits, we'd need to have an HTTP/SOCKS proxy
+;;       outside the sandbox enforcing such restrictions and only mount a narrow
+;;       Unix socket inside the sandbox to talk to the proxy.
+(allow network-outbound (remote ip))
+(allow network-outbound (literal "/private/var/run/mDNSResponder"))
+
+;; gvc uses Unix sockets under /private/tmp/gvc-* for CLI→GUI IPC.
+(allow network-bind     (local  unix-socket (path-regex #"^/private/tmp/gvc-")))
+(allow network-outbound (remote unix-socket (path-regex #"^/private/tmp/gvc-")))
+
+;; Localhost TCP — WKWebView's Networking process binds and connects locally.
+(allow network-bind     (local  ip "localhost:*"))
+(allow network-outbound (remote ip "localhost:*"))
+
+;; -----------------------------------------------------------------------------
+;; Sandbox Configuration Protection
+;; -----------------------------------------------------------------------------
+
+;; Protect this profile extension from being modified by the sandboxed
+;; process. Safehouse's workdir grant makes the whole project tree r/w,
+;; so we need an explicit deny here. Sandbox-exec evaluates rules in
+;; "last-match wins" order, and this file is appended AFTER the workdir
+;; grant, so this deny takes effect.
+(deny file-write*
+    (literal (string-append SCRIPT_DIR "/sandbox"))
+    (literal (string-append SCRIPT_DIR "/gvc-safehouse-extensions.sb"))
+    (regex #"^/private/tmp/gvc-sandbox-vars-[^/]+\.sb$"))
+
+;; -----------------------------------------------------------------------------

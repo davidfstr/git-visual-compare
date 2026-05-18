@@ -1,0 +1,413 @@
+#!/usr/bin/env bash
+# Run a command inside a macOS Seatbelt sandbox tailored for gvc development.
+# Usage: ./sandbox <command> [args...]
+# Example: ./sandbox poetry run pytest
+#
+# Two modes:
+#   Outer sandbox — wraps the Claude Code process itself. Activated when the
+#     command is "claude" and resolves to the global Claude Code installation.
+#     Permits network (Anthropic API) and Claude Code's own config/data paths.
+#   Inner sandbox — wraps gvc-related commands directly, when outer Claude Code
+#     process is not being used. Denies network and limits file access to the
+#     project tree.
+#   Seatbelt does not appear to allow nesting of sandboxes, so both outer and
+#   inner sandbox modes cannot be used at the same time.
+
+# If an error occurs abort the script
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Detect outer sandbox mode: $1 resolves (via PATH lookup then symlink expansion)
+# to a binary inside $HOME/.local/share/claude/, the standard Claude Code install tree.
+OUTER_MODE=false
+RESOLVED_CLAUDE=""
+if [[ -n "${1:-}" ]]; then
+    _CLAUDE_PATH="$(command -v "$1" 2>/dev/null || true)"
+    if [[ -n "$_CLAUDE_PATH" ]]; then
+        _CLAUDE_REAL="$(realpath "$_CLAUDE_PATH" 2>/dev/null || true)"
+        if [[ "$_CLAUDE_REAL" == "$HOME/.local/share/claude/"* ]]; then
+            OUTER_MODE=true
+            RESOLVED_CLAUDE="$_CLAUDE_REAL"
+        fi
+    fi
+fi
+
+# Write Seatbelt sandbox policy to temp file
+SBPL="$(mktemp /tmp/gvc-sandbox.XXXXXX)"
+trap 'rm -f "$SBPL"' EXIT
+
+cat > "$SBPL" << BASE_SBPL_END
+(version 1)
+
+; --- Deny everything by default ---
+(deny default)
+
+; --- Mach IPC ---
+; Minimal explicit allowlist determined by:
+; 1. inspecting logs for sandbox deny log entries
+; 2. binary search over the full set of com.apple.* services
+;    (enumerated via launchctl) to discover hidden services that were denied
+;    but not logged.
+; 
+; NOTE: WebKit's PID-suffixed sub-process names (com.apple.WebKit.GPU.<pid> etc.)
+; are not statically enumerable, so they are covered by a separate regex at the end.
+(allow mach-lookup
+  (global-name "com.apple.accessibility.mediaaccessibilityd")
+  (global-name "com.apple.analyticsd")
+  (global-name "com.apple.appkit.restoration_storage")
+  (global-name "com.apple.audio.AudioComponentRegistrar")
+  (global-name "com.apple.bsd.dirhelper")
+  (global-name "com.apple.carboncore.csnameddata")
+  (global-name "com.apple.CARenderServer")
+  (global-name "com.apple.coreservices.appleevents")
+  (global-name "com.apple.CoreServices.coreservicesd")
+  (global-name "com.apple.coreservices.launchservicesd")
+  (global-name "com.apple.coreservices.quarantine-resolver")
+  (global-name "com.apple.cvmsServ")
+  (global-name "com.apple.diagnosticd")
+  (global-name "com.apple.DiskArbitration.diskarbitrationd")
+  (global-name "com.apple.dock.fullscreen")
+  (global-name "com.apple.dock.server")
+  (global-name "com.apple.hiservices-xpcservice")
+  (global-name "com.apple.iconservices")
+  (global-name "com.apple.iconservices.store")
+  (global-name "com.apple.logd")
+  (global-name "com.apple.lsd.mapdb")
+  (global-name "com.apple.lsd.modifydb")
+  (global-name "com.apple.nsurlsessiond")  ; hidden service; does NOT appear in sandbox deny log entries
+  (global-name "com.apple.pasteboard.1")
+  (global-name "com.apple.pluginkit.pkd")
+  (global-name "com.apple.PowerManagement.control")
+  (global-name "com.apple.system.notification_center")
+  (global-name "com.apple.system.opendirectoryd.libinfo")
+  (global-name "com.apple.system.opendirectoryd.membership")
+  (global-name "com.apple.tccd.system")
+  (global-name "com.apple.touchbarserver.mig")
+  (global-name "com.apple.tsm.uiserver")
+  (global-name "com.apple.uiintelligencesupport.agent")
+  (global-name "com.apple.ViewBridgeAuxiliary")
+  (global-name "com.apple.webprivacyd")  ; tests pass if omitted, but still appears in deny logs
+  (global-name "com.apple.window_proxies")
+  (global-name "com.apple.windowmanager.server")
+  (global-name "com.apple.windowserver.active")
+  
+  ; PID-suffixed WebKit sub-process names registered at runtime
+  (global-name-regex #"^com\\.apple\\.WebKit\\.")
+)
+
+; --- Process ---
+; process-exec is allowed broadly: the file-read rules already constrain which
+; binaries are reachable (system, current-user, and project paths only), so a
+; separate exec allowlist would duplicate that boundary with no security gain.
+(allow process-exec)
+(allow process-fork)
+; NOTE: Only needed by 1 test: test_when_gvc_run_in_terminal_given_no_gui_running_then_starts_gui_and_opens_new_diff_window
+;       which already fails to execute inside this sandbox for other reasons
+;(allow lsopen)
+(allow process-info* (target same-sandbox))
+(allow signal (target same-sandbox))
+(allow mach-priv-task-port (target same-sandbox))
+
+; --- Preferences ---
+; (allow user-preference-read) is intentionally omitted:
+; - gvc's prefs use a JSON file (not NSUserDefaults),
+;   so no preference-domain reads are needed.
+; - A read of a "com.apple.hitoolbox" preference is logged as denied but
+;   does not cause any tests to fail.
+
+; --- Kernel ---
+; sysctl-read is allowed broadly: all keys expose machine configuration only,
+; no user data. Enumerating specific keys would be brittle to future changes
+; in Python, git, or macOS.
+(allow sysctl-read)
+
+; --- Sockets ---
+; AF_SYSTEM (routing socket — needed by network stack init)
+(allow system-socket
+  (require-all (socket-domain AF_SYSTEM) (socket-protocol 2)))
+; AF_UNIX (gvc uses Unix sockets for CLI→GUI IPC and test harness control)
+(allow system-socket (socket-domain AF_UNIX))
+(allow network-bind    (local unix-socket (path-regex #"^/private/tmp/gvc-")))
+(allow network-outbound (remote unix-socket (path-regex #"^/private/tmp/gvc-")))
+; Localhost TCP (used by WKWebView's networking process internally)
+(allow network-bind    (local ip "localhost:*"))
+(allow network-outbound (remote ip "localhost:*"))
+
+; --- WebKit child-process bootstrap ---
+; WKWebView spawns GPU, WebContent, and Networking helper processes.
+; These extensions let the parent grant them sandbox capabilities.
+(allow mach-issue-extension
+  (extension-class "com.apple.webkit.extension.mach"))
+(allow generic-issue-extension
+  (extension-class "com.apple.webkit.mach-bootstrap"))
+(allow mach-register
+  (global-name-regex #"^com\\.apple\\.WebKit\\."))
+(allow mach-register
+  (local-name "com.apple.axserver")
+  (local-name "com.apple.tsm.portname")
+  (local-name "com.apple.coredrag"))
+
+; --- File extensions for WebKit sandboxed sub-processes ---
+(allow file-issue-extension
+  (extension-class "com.apple.app-sandbox.read")
+  (extension-class "com.apple.app-sandbox.read-write"))
+
+; --- File reads (allowlist only; intentionally excludes most of $HOME) ---
+; Root directory itself (needed by dyld during process startup)
+(allow file-read* (literal "/"))
+; Standard Unix + macOS system paths
+(allow file-read* (subpath "/bin"))
+(allow file-read* (subpath "/sbin"))
+(allow file-read* (subpath "/opt/homebrew"))  ; Homebrew
+(allow file-read* (subpath "/opt/local/bin"))
+(allow file-read* (subpath "/opt/local/sbin"))
+(allow file-read* (subpath "/opt/local/lib"))
+(allow file-read* (literal "/dev"))         ; directory entry for ls/stat
+; NOTE: File descriptors can only be accessed by their owning process
+(allow file-read* (subpath "/dev/fd"))
+(allow file-read* (literal "/dev/null"))
+(allow file-read* (literal "/dev/stdin"))
+(allow file-read* (literal "/dev/stdout"))
+(allow file-read* (literal "/dev/stderr"))
+(allow file-read* (literal "/dev/urandom"))
+(allow file-read* (literal "/dev/random"))
+(allow file-read* (literal "/dev/tty"))     ; terminal detection
+(allow file-read-metadata (literal "/etc"))       ; symlink — content covered by /private/etc
+(allow file-read-metadata (literal "/private"))  ; symlink resolution for /etc /tmp /var
+(allow file-read* (subpath "/private/etc"))
+(allow file-read-metadata (literal "/private/tmp"))  ; directory stat only
+(allow file-read* (path-regex #"^/private/tmp/gvc-"))       ; sandbox policy files + test harness dirs
+(allow file-read* (path-regex #"^/private/tmp/tmp[^/]*\.gvc$"))  ; gvc IPC diff temp files
+(allow file-read-metadata (literal "/private/var"))  ; stat without directory listing
+; /private/var/folders: stat intermediate dirs; full read only under T/ (temp) and C/ (cache)
+(allow file-read-metadata
+  (literal "/private/var/folders")
+  (path-regex #"^/private/var/folders/[^/]+(/[^/]+)?$"))
+(allow file-read* (path-regex #"^/private/var/folders/[^/]+/[^/]+/T(/|$)"))
+(allow file-read-metadata (literal "/tmp"))       ; symlink — content covered by /private/tmp
+(allow file-read-metadata (literal "/var"))       ; symlink — content covered by /private/var/*
+(allow file-read-metadata (literal "/System"))    ; stat /System itself (dyld startup)
+(allow file-read-metadata (literal "/System/Cryptexes"))
+(allow file-read* (subpath "/System/Cryptexes/OS"))
+(allow file-read-metadata (literal "/System/Library"))
+(allow file-read* (subpath "/System/Library/CoreServices"))
+(allow file-read* (subpath "/System/Library/Fonts"))  ; don't render menu titles with ���
+(allow file-read* (subpath "/System/Library/Frameworks"))
+(allow file-read* (subpath "/System/Library/PrivateFrameworks"))
+(allow file-read-metadata (literal "/System/Volumes"))  ; stat /System/Volumes itself
+(allow file-read* (subpath "/System/Volumes/Preboot"))
+(allow file-read-metadata (literal "/usr"))   ; directory stat
+(allow file-read* (subpath "/usr/bin"))       ; git, python symlinks, etc.
+(allow file-read* (subpath "/usr/lib"))       ; system dylibs
+(allow file-read* (subpath "/usr/libexec"))   ; helper/XPC processes
+(allow file-read* (subpath "/usr/share"))     ; locale, timezone, terminfo
+(allow file-read-metadata (literal "/Library"))
+(allow file-read-metadata (literal "/Library/Developer"))
+(allow file-read* (subpath "/Library/Developer/CommandLineTools"))
+(allow file-read-metadata (literal "/Library/Frameworks"))
+(allow file-read* (subpath "/Library/Frameworks/Python.framework"))
+; stat/lstat on intermediate $HOME path components needed for realpath traversal.
+; file-read-metadata allows stat/lstat WITHOUT allowing directory listing.
+(allow file-read-metadata
+  (literal "/Users")
+  (literal "$HOME")
+  (literal "$HOME/.local")
+  (literal "$HOME/.local/pipx")
+  (literal "$HOME/Library")
+  (literal "$HOME/Library/Application Support")
+  (literal "$HOME/Library/Logs")
+  (literal "$HOME/Library/Logs/gvc")
+  (literal "$HOME/Library/WebKit")
+  (literal "${SCRIPT_DIR%/*}"))
+; User subtrees actually needed
+(allow file-read* (subpath "$HOME/Library/Caches/com.apple.python"))  ; Python system cache
+(allow file-read* (subpath "$HOME/Library/Caches/org.python.python")) ; Python bytecode cache
+(allow file-read* (subpath "$HOME/Library/Caches/pip"))               ; pip package cache
+(allow file-read* (subpath "$HOME/Library/Caches/pypoetry"))          ; poetry package cache
+(allow file-read* (subpath "$HOME/Library/WebKit/net.dafoster.gvc"))  ; gvc WebKit storage
+(allow file-read* (subpath "$HOME/Library/WebKit/org.python.python")) ; Python WebKit storage
+(allow file-read* (subpath "$HOME/Library/Application Support/pypoetry")) ; poetry config
+(allow file-read* (subpath "$HOME/.local/bin"))        ; poetry symlink
+(allow file-read* (subpath "$HOME/.local/pipx/venvs")) ; poetry pipx venv
+(allow file-read* (literal "$HOME/.bash_profile"))  ; bash startup script
+(allow file-read* (literal "$HOME/.bashrc"))        ; bash startup script
+(allow file-read* (subpath "$HOME/.cargo"))         ; cargo
+(allow file-read* (subpath "$HOME/.config/gh"))     ; gh
+(allow file-read* (subpath "$HOME/.config/git"))    ; git
+(allow file-read* (subpath "$HOME/.gitconfig"))     ; git
+; Project source + .venv
+(allow file-read* (subpath "$SCRIPT_DIR"))
+
+; --- File writes (restricted) ---
+; Temp directories (write rules mirror the read rules above)
+(allow file-write* (path-regex #"^/private/tmp/gvc-"))
+(allow file-write* (path-regex #"^/private/tmp/tmp[^/]*\.gvc$"))
+(allow file-write* (path-regex #"^/private/var/folders/[^/]+/[^/]+/C/"))
+; Standard character devices
+(allow file-write* (literal "/dev/null"))
+(allow file-write* (literal "/dev/stdout"))
+(allow file-write* (literal "/dev/stderr"))
+; gvc log file (written by GUI server on manual/non-test invocations)
+(allow file-write* (subpath "$HOME/Library/Logs/gvc"))
+; WebKit caches (required for WKWebView JS evaluation to complete)
+(allow file-write* (subpath "$HOME/Library/Caches/org.python.python"))
+(allow file-write* (subpath "$HOME/Library/WebKit/net.dafoster.gvc"))  ; gvc WebKit storage
+(allow file-write* (subpath "$HOME/Library/WebKit/org.python.python")) ; Python WebKit storage
+; Project directory (test outputs, .pytest_cache, etc.)
+(allow file-write* (subpath "$SCRIPT_DIR"))
+; Deny writes to the sandbox script itself and Claude Code config (more specific rules override the subpath above)
+(deny file-write* (subpath "$SCRIPT_DIR/sandbox-legacy"))
+(deny file-write* (literal "$SCRIPT_DIR/sandbox-legacy/sandbox"))
+(deny file-write* (subpath "$SCRIPT_DIR/.claude"))
+BASE_SBPL_END
+
+if $OUTER_MODE; then
+    cat >> "$SBPL" << OUTER_SBPL_END
+
+; === Outer sandbox: Claude Code process ===
+
+; Network: Claude Code requires outbound access to the Anthropic API
+; NOTE: Allows unrestricted outbound network communication.
+;       There is no way to make this outbound network access more fine-grained
+;       using Seatbelt policy. In particular we cannot limit
+;       - protocol types (e.g. only dns, http, https, quic),
+;       - URL hostnames (e.g. https://code.claude.com/), or
+;       - URL path prefixes (e.g. https://github.com/davidfstr/*).
+;       To provide those kinds of limits, we'd need to have an HTTP/SOCKS proxy
+;       outside the sandbox enforcing such restrictions and only mount a narrow
+;       Unix socket inside the sandbox to talk to the proxy.
+(allow network-outbound)
+
+; Claude Code binary and bundled resources (~/.local/share/claude/versions/...)
+(allow file-read* (subpath "$HOME/.local/share/claude"))
+; Parent directory stat needed to resolve the binary's own path
+(allow file-read-metadata (literal "$HOME/.local/share"))
+
+; Claude Code temp files (UID-specific dirs and other claude-* paths)
+(allow file-read* file-write* (path-regex #"^/private/tmp/claude-"))
+
+; Global Claude Code config and session state (~/.claude/)
+; Distinct from the project-local $SCRIPT_DIR/.claude whose writes remain denied above.
+; NOTE: Allows an agent to read conversation history from *all* previous sessions,
+;       including sessions that were not sandboxed. Ideally we'd only provide
+;       access to conversation history from sandboxed sessions to prevent
+;       leak of data from outside the sandbox.
+(allow file-read* (subpath "$HOME/.claude"))
+
+; Auth file written by "claude login"
+(allow file-read* file-write*
+  (literal "$HOME/.claude.json")
+  (literal "$HOME/.claude.json.backup")
+  (literal "$HOME/.claude.json.lock")
+  (path-regex #"^$HOME/\.claude\.json\.tmp\."))
+
+; Conversation history and session state (written by Claude Code during sessions)
+(allow file-write*
+  (literal "$HOME/.claude/history.jsonl")
+  (subpath "$HOME/.claude/projects")
+  (subpath "$HOME/.claude/session-env")
+  (subpath "$HOME/.claude/sessions"))
+
+; Plans (written by Claude Code's /plan mode during sessions)
+(allow file-write*
+  (subpath "$HOME/.claude/plans"))
+
+; Tasks (written by Claude Code's Task tool during sessions)
+(allow file-write*
+  (subpath "$HOME/.claude/tasks"))
+
+; MCP server cache and logs (Node.js)
+(allow file-read* file-write* (subpath "$HOME/Library/Caches/claude-cli-nodejs"))
+
+; Temp dir writes (Claude Code's Node.js runtime writes temp files here)
+(allow file-write* (path-regex #"^/private/var/folders/[^/]+/[^/]+/T(/|$)"))
+
+; IPC shared memory — notification center (repeated denials cause a spin loop)
+(allow ipc-posix-shm-read-data (ipc-posix-name "apple.shm.notification_center"))
+(allow ipc-posix-shm-write-create (ipc-posix-name "com.apple.AppleDatabaseChanged"))
+
+; Trust daemon — required for TLS certificate validation (Anthropic API calls)
+(allow mach-lookup (global-name "com.apple.trustd.agent"))
+
+; Node.js diagnostic tracing
+(allow file-read-data (literal "/dev/dtracehelper"))
+(allow file-ioctl (literal "/dev/null"))
+
+; Timezone data (Node.js / libc reads these for date formatting)
+(allow file-read-metadata
+  (literal "/private/var/db")
+  (literal "/private/var/db/timezone")
+  (literal "/private/var/db/timezone/zoneinfo")
+  (literal "/private/var/db/timezone/icutz"))
+
+; System-wide preferences (read-only)
+(allow file-read*
+  (literal "/Library/Preferences/.GlobalPreferences.plist")
+  (literal "/Library/Preferences/com.apple.networkd.plist")
+  (literal "/Library/Preferences/com.apple.security.plist")
+  (literal "/Library/Preferences/Logging/com.apple.diagnosticd.filter.plist"))
+
+; User preferences (read-only)
+(allow file-read*
+  (literal "$HOME/Library/Preferences/.GlobalPreferences.plist")
+  (literal "$HOME/Library/Preferences/.GlobalPreferences_m.plist")
+  (literal "$HOME/Library/Preferences/com.apple.security.plist")
+  (path-regex #"^$HOME/Library/Preferences/ByHost/\\.GlobalPreferences\\..*\\.plist$"))
+
+; Keychain infrastructure
+; NOTE: Unfortunately direct read access to the (thankfully encrypted)
+;       user keychain (login.keychain-db) is required to access Anthropic
+;       login credentials. Granting mach-lookups to the security services
+;       related to the keychain are not sufficient.
+(allow file-read-metadata
+  (literal "/Library/Keychains")
+  (literal "/Library/Keychains/System.keychain")
+  (literal "/private/var/run/systemkeychaincheck.done")
+  (literal "$HOME/Library/Keychains")
+  (literal "$HOME/Library/Keychains/login.keychain"))
+(allow file-read*
+  (literal "$HOME/Library/Keychains/login.keychain-db")
+  (literal "/System/Library/Keychains/SystemTrustSettings.plist")
+  (subpath "/private/var/db/mds/system"))
+(allow mach-lookup
+  (global-name "com.apple.SecurityServer")
+  (global-name "com.apple.securityd")
+  (global-name "com.apple.securityd.xpc"))
+
+; FSEvents: Node.js file-change watching used by Claude Code internals
+; NOTE: FSEvents lets a process register watches on *any* path and receive 
+;       change notifications, even for paths it cannot read directly.
+;       Acceptable information leakage in exchange for Claude Code to not
+;       fall back to inefficient continuous filesystem polling.
+(allow mach-lookup (global-name "com.apple.FSEvents"))
+
+; PTY/terminal: Claude Code uses xterm.js which requires PTY creation for its
+; interactive terminal UI. Without this, escape sequences render raw.
+(allow pseudo-tty)
+(allow file-read* file-write* file-ioctl (literal "/dev/ptmx"))
+(allow file-read* file-write* file-ioctl (literal "/dev/tty"))
+(allow file-read* file-write*
+  (require-all
+    (regex #"^/dev/ttys[0-9]+")
+    (extension "com.apple.sandbox.pty")))
+; Allow ioctl on ALL ttys including ttys created from outside the sandbox
+; (which lack the "com.apple.sandbox.pty" extension). Ideally we'd only allow
+; ioctl on the particular tty that Claude Code creates, but we don't know
+; its number in advance.
+; NOTE: The powerful TIOCSTI (Simulate Terminal Input) ioctl thankfully cannot be
+;       used on a tty controlled by a different process, as enforced by the
+;       XNU kernel (bsd/kern/tty.c) regardless of Seatbelt policy.
+(allow file-ioctl (regex #"^/dev/ttys[0-9]+"))
+OUTER_SBPL_END
+fi
+
+# Run provided command inside Seatbelt sandbox (via sandbox-exec).
+# GVC_SEATBELT_SANDBOX=1 signals to tests that some capabilities are restricted.
+# In outer mode, replace the symlink arg with the realpath so the shell executes
+# the binary directly with no further symlink resolution.
+if $OUTER_MODE; then
+    exec sandbox-exec -f "$SBPL" env GVC_SEATBELT_SANDBOX=1 "$RESOLVED_CLAUDE" "${@:2}"
+else
+    exec sandbox-exec -f "$SBPL" env GVC_SEATBELT_SANDBOX=1 "$@"
+fi
